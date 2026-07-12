@@ -30,6 +30,8 @@ UA = {"User-Agent": "Mozilla/5.0 (compatible; SectorDashboard/1.0)"}
 
 STOCK_DAY_ALL = "https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=json"
 COMPANY_LIST = "https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv"
+# 可指定日期、一次抓全部個股當日成交（用於假日回補最近交易日）
+MI_INDEX = "https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&type=ALLBUT0999&date={date}"
 
 # 證交所產業別 → 儀表板顯示板塊（可自行調整合併）
 INDUSTRY_MAP = {
@@ -107,9 +109,25 @@ def build_industry_lookup():
 
 
 def fetch_quotes():
-    """回傳 list[dict]，每檔含 code/name/close/change_pct/volume。"""
-    data = fetch_json(STOCK_DAY_ALL)
+    """回傳 list[dict]，每檔含 code/name/close/change_pct/volume。
+    非交易日（假日）證交所可能回空白或非 JSON，此時回傳 None 視為無資料。"""
+    req = urllib.request.Request(STOCK_DAY_ALL, headers=UA)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            raw = r.read().decode("utf-8").strip()
+    except Exception as e:
+        print(f"  個股成交連線失敗（可能為非交易日）：{e}")
+        return None
+    if not raw:
+        print("  個股成交回傳空白（非交易日或尚未收盤）。")
+        return None
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        print("  個股成交回傳非 JSON（非交易日或來源維護中）。")
+        return None
     if data.get("stat") != "OK" or "data" not in data:
+        print(f"  個股成交 stat 非 OK：{data.get('stat')}")
         return None
     fields = data.get("fields", [])
     # 依欄位名稱定位索引，避免順序變動
@@ -193,6 +211,98 @@ def aggregate_by_sector(quotes, industry_lookup):
     return result
 
 
+def parse_mi_index(data):
+    """解析 MI_INDEX 回傳，抽出個股 code/name/close/change_pct/volume。
+    MI_INDEX 的個股表通常在 data9 / tables 之一，欄位含代號/收盤/漲跌(+-)/漲跌價差。"""
+    # 新版回傳有 tables 陣列；舊版有 data1..data9。都嘗試。
+    candidate_rows = []
+    if isinstance(data.get("tables"), list):
+        for t in data["tables"]:
+            fields = t.get("fields", [])
+            if any("證券代號" in f or "股票代號" in f for f in fields):
+                candidate_rows.append((fields, t.get("data", [])))
+    for i in range(1, 12):
+        key = "data%d" % i
+        fkey = "fields%d" % i
+        if key in data and fkey in data:
+            fields = data.get(fkey, [])
+            if any("證券代號" in f or "股票代號" in f for f in fields):
+                candidate_rows.append((fields, data[key]))
+    if not candidate_rows:
+        return None
+
+    out = []
+    for fields, rows in candidate_rows:
+        def idx(*names):
+            for n in names:
+                for i, f in enumerate(fields):
+                    if n in f:
+                        return i
+            return None
+        i_code = idx("證券代號", "股票代號")
+        i_name = idx("證券名稱", "股票名稱")
+        i_close = idx("收盤價")
+        i_dir = idx("漲跌(+/-)", "漲跌")
+        i_diff = idx("漲跌價差")
+        i_vol = idx("成交股數")
+        if i_code is None or i_close is None:
+            continue
+        for row in rows:
+            try:
+                code = str(row[i_code]).strip()
+            except Exception:
+                continue
+            if not (code.isdigit() and len(code) == 4):
+                continue
+            close = to_float(row[i_close])
+            vol = to_float(row[i_vol]) if i_vol is not None else None
+            if close is None or vol is None:
+                continue
+            diff = to_float(row[i_diff]) if i_diff is not None else None
+            # 方向：漲跌欄可能是 HTML 的 <p>+</p> 或純 +/-
+            sign = 1
+            if i_dir is not None:
+                dtxt = str(row[i_dir])
+                if "-" in dtxt or "green" in dtxt.lower():
+                    sign = -1
+            chg_pct = None
+            if diff is not None:
+                signed_diff = diff * sign
+                prev = close - signed_diff
+                if prev:
+                    chg_pct = round(signed_diff / prev * 100, 2)
+            out.append({
+                "code": code,
+                "name": str(row[i_name]).strip() if i_name is not None else code,
+                "close": close,
+                "change_pct": chg_pct if chg_pct is not None else 0.0,
+                "volume": vol,
+            })
+        if out:
+            break
+    return out or None
+
+
+def fetch_quotes_by_date(yyyymmdd):
+    """用 MI_INDEX 抓指定日期全市場個股。非交易日回 None。"""
+    url = MI_INDEX.format(date=yyyymmdd)
+    req = urllib.request.Request(url, headers=UA)
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            raw = r.read().decode("utf-8").strip()
+    except Exception:
+        return None
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return None
+    if data.get("stat") != "OK":
+        return None
+    return parse_mi_index(data)
+
+
 def main():
     now = datetime.now(TZ)
     print(f"[{now.isoformat()}] 開始抓取台股資料 ...")
@@ -213,8 +323,24 @@ def main():
         sys.exit(1)
 
     if not quotes:
-        print("  今日無成交資料（可能為非交易日），保留既有 data.json。")
-        sys.exit(0)
+        # 當日無資料（假日/未收盤）→ 往回找最近一個交易日回補
+        print("  當日無成交，往回尋找最近交易日 ...")
+        used_date = None
+        for back in range(1, 8):
+            d = (now - timedelta(days=back)).strftime("%Y%m%d")
+            time.sleep(2)  # 禮貌間隔
+            q = fetch_quotes_by_date(d)
+            if q:
+                quotes = q
+                used_date = d
+                print(f"  已取得 {d} 的資料：{len(q)} 檔")
+                break
+        if not quotes:
+            print("  近 7 日皆無資料，保留既有 data.json。")
+            sys.exit(0)
+        data_date = used_date[:4] + "-" + used_date[4:6] + "-" + used_date[6:]
+    else:
+        data_date = now.strftime("%Y-%m-%d")
 
     print(f"  有效個股：{len(quotes)} 檔")
     sectors = aggregate_by_sector(quotes, industry_lookup)
@@ -222,8 +348,9 @@ def main():
 
     payload = {
         "updated": now.strftime("%Y-%m-%d %H:%M"),
+        "data_date": data_date,
         "market": "TW",
-        "source": "TWSE STOCK_DAY_ALL + t187ap03_L",
+        "source": "TWSE STOCK_DAY_ALL / MI_INDEX + t187ap03_L",
         "note": "板塊漲跌為成交金額加權；面積為當日成交金額(億元)近似，非真實市值。",
         "heatmap": sectors,
     }
