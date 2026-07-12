@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>產業情報台</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<style>
+  :root{
+    --bg:#0d0f14; --panel:#141821; --panel2:#1a1f2b; --line:#252b38;
+    --ink:#e6e9ef; --ink2:#9aa3b2; --ink3:#5f6878; --accent:#3987e5;
+    --mono:'SFMono-Regular',ui-monospace,'Menlo','Consolas','Courier New',monospace;
+    --sans:'Inter','Noto Sans TC','Microsoft JhengHei',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+    font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1100px;margin:0 auto;padding:22px 20px 60px;}
+  .topbar{display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+  .brand{font-size:21px;font-weight:600;letter-spacing:1px;}
+  .brand small{display:block;font-size:11px;color:var(--ink3);font-family:var(--mono);
+    font-weight:400;letter-spacing:2px;margin-top:3px;}
+  .index-quote{text-align:right;font-family:var(--mono);}
+  .index-val{font-size:24px;font-weight:600;}
+  .index-chg{font-size:12px;}
+  .ctry-tabs{display:flex;gap:6px;margin-bottom:24px;flex-wrap:wrap;}
+  .ctry-tabs button{padding:7px 16px;border-radius:6px;border:1px solid var(--line);
+    background:transparent;color:var(--ink2);font-size:13px;cursor:pointer;font-family:inherit;
+    transition:all .12s ease;}
+  .ctry-tabs button:hover{border-color:var(--ink3);}
+  .ctry-tabs button.on{background:var(--panel2);color:var(--ink);border-color:var(--accent);}
+  .section-label{font-size:12px;color:var(--ink2);margin:0 0 10px;
+    display:flex;align-items:center;gap:7px;letter-spacing:0.5px;}
+  .section-label .tag{font-family:var(--mono);color:var(--ink3);font-size:10px;
+    border:1px solid var(--line);padding:1px 6px;border-radius:3px;margin-left:auto;}
+  .block{margin-bottom:40px;}
+  #tm{width:100%;height:420px;}
+  .legend{display:flex;gap:12px;align-items:center;font-size:11px;color:var(--ink3);
+    font-family:var(--mono);margin-top:10px;}
+  .legend .bar{flex:1;height:8px;border-radius:2px;max-width:240px;}
+  .flow-note{font-size:11px;color:var(--ink3);margin:-4px 0 12px;}
+  .mf-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px;}
+  .mf-hdr{display:grid;grid-template-columns:22px 1fr 1fr 72px 84px;gap:10px;align-items:center;
+    padding:0 0 8px;font-size:11px;color:var(--ink3);font-family:var(--mono);border-bottom:1px solid var(--line);}
+  .mf-hdr .r{text-align:right;}
+  .mf-row{display:grid;grid-template-columns:22px 1fr 1fr 72px 84px;gap:10px;align-items:center;
+    padding:8px 0;border-bottom:1px solid var(--line);}
+  .mf-rank{font-size:11px;font-family:var(--mono);color:var(--ink3);}
+  .mf-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mf-mom{position:relative;height:16px;display:flex;align-items:center;}
+  .mf-mom i{height:16px;border-radius:3px;opacity:.85;display:block;}
+  .mf-momval{font-size:11px;font-family:var(--mono);color:var(--ink3);margin-left:6px;}
+  .mf-chg{font-size:13px;font-family:var(--mono);text-align:right;font-weight:500;}
+  .mf-vol{font-size:12px;font-family:var(--mono);text-align:right;color:var(--ink2);position:relative;}
+  .mf-vol i{position:absolute;right:0;top:50%;transform:translateY(-50%);height:16px;background:var(--panel2);border-radius:3px;}
+  .mf-vol span{position:relative;}
+  @media(max-width:760px){
+    .mf-hdr,.mf-row{grid-template-columns:20px 1fr 70px 76px;}
+    .mf-mom{display:none;}
+  }
+  .flow-row{display:grid;grid-template-columns:140px 1fr 68px;align-items:center;gap:10px;
+    padding:7px 0;border-bottom:1px solid var(--line);}
+  .flow-row .fn{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .flow-row .fbar{position:relative;height:18px;display:flex;}
+  .flow-row .fbar i{height:18px;border-radius:3px;opacity:.85;display:block;}
+  .flow-row .fv{font-size:12px;font-family:var(--mono);text-align:right;}
+  .flow-foot{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);
+    font-family:var(--mono);margin-top:10px;}
+  .day-tabs{display:flex;gap:4px;}
+  .day-tabs button{padding:4px 11px;border-radius:5px;border:1px solid var(--line);
+    background:transparent;color:var(--ink2);font-size:12px;cursor:pointer;font-family:inherit;transition:all .12s ease;}
+  .day-tabs button.on{background:var(--panel2);color:var(--ink);border-color:var(--accent);}
+  .chain-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+  .chain-tabs button{padding:6px 13px;border-radius:6px;border:1px solid var(--line);
+    background:transparent;color:var(--ink2);font-size:12px;cursor:pointer;font-family:inherit;transition:all .12s ease;}
+  .chain-tabs button:hover{border-color:var(--ink3);}
+  .chain-tabs button.on{background:var(--panel2);color:var(--ink);border-color:var(--accent);}
+  .chain-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--ink2);margin-bottom:12px;align-items:center;}
+  .chain-legend .cdot{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:4px;vertical-align:-1px;}
+  .chain-legend .lstage-hint{margin-left:auto;color:var(--ink3);}
+  .chain-demand{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin-bottom:8px;}
+  .chain-demand .dl{font-size:11px;color:var(--ink3);font-family:var(--mono);margin-bottom:6px;letter-spacing:.3px;}
+  .chain-arrow{text-align:center;color:var(--ink3);font-size:13px;margin:3px 0;}
+  .flow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  .flow-col{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 14px 16px;}
+  .flow-col h3{margin:0 0 2px;font-size:14px;font-weight:600;}
+  .flow-col .sub{font-size:11px;color:var(--ink3);font-family:var(--mono);margin-bottom:12px;}
+  .flow-col.up{border-top:3px solid #7f77dd;}
+  .flow-col.mid{border-top:3px solid var(--accent);}
+  .flow-col.down{border-top:3px solid #1d9e75;}
+  .node{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:9px 11px;margin-bottom:9px;}
+  .node:last-child{margin-bottom:0;}
+  .node .role{font-size:11px;color:var(--ink2);margin-bottom:5px;letter-spacing:.3px;display:flex;align-items:center;justify-content:space-between;gap:6px;}
+  .node .rstage{font-size:9px;font-family:var(--mono);padding:1px 6px;border-radius:3px;white-space:nowrap;}
+  .cos-tags{display:flex;flex-wrap:wrap;gap:4px;}
+  .co{font-size:11px;font-family:var(--mono);padding:2px 7px;border-radius:4px;border:1px solid var(--line);}
+  .co-tw{background:rgba(226,75,74,.14);color:#f0997b;border-color:rgba(226,75,74,.3);}
+  .co-us{background:rgba(57,135,229,.14);color:#85b7eb;border-color:rgba(57,135,229,.3);}
+  .co-kr{background:rgba(147,133,233,.14);color:#afa9ec;border-color:rgba(147,133,233,.3);}
+  .co-jp{background:rgba(29,158,117,.14);color:#5dcaa5;border-color:rgba(29,158,117,.3);}
+  .co-cn{background:rgba(239,159,39,.14);color:#ef9f27;border-color:rgba(239,159,39,.3);}
+  .co-x{background:rgba(159,160,160,.13);color:#b4b2a9;border-color:rgba(159,160,160,.28);}
+  .st-now{background:rgba(29,158,117,.18);color:#5dcaa5;}
+  .st-soon{background:rgba(239,159,39,.18);color:#ef9f27;}
+  .st-later{background:rgba(120,130,150,.18);color:var(--ink3);}
+  .chain-enable{border:1px dashed var(--line);border-radius:10px;padding:11px 14px;margin-top:8px;}
+  .chain-enable .el{font-size:11px;color:var(--ink3);font-family:var(--mono);margin-bottom:9px;letter-spacing:.3px;}
+  .chain-erow{display:flex;flex-wrap:wrap;gap:16px;}
+  .chain-eitem{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .chain-eitem .en{font-size:12px;color:var(--ink2);}
+  .gr-ctrls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;}
+  .gr-seg{display:inline-flex;gap:4px;flex-wrap:wrap;}
+  .gr-seg button{padding:6px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--ink2);font-size:12px;cursor:pointer;font-family:inherit;transition:all .12s;}
+  .gr-seg button.on{background:var(--panel2);color:var(--ink);border-color:var(--accent);}
+  .gr-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:var(--ink2);margin-bottom:10px;align-items:center;}
+  .gr-legend .gdot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:-1px;}
+  .gr-box{position:relative;width:100%;height:520px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .gr-box svg{display:block;width:100%;height:100%;cursor:grab;}
+  .gr-box svg:active{cursor:grabbing;}
+  .gr-label{font-size:11px;pointer-events:none;fill:var(--ink);}
+  .gr-tip{position:absolute;pointer-events:none;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:12px;opacity:0;transition:opacity .1s;max-width:250px;z-index:5;}
+  .gr-tip .gtname{font-weight:600;font-size:13px;margin-bottom:4px;}
+  .gr-tip .gtrow{color:var(--ink2);font-family:var(--mono);font-size:11px;line-height:1.6;}
+  .gr-hint{font-size:11px;color:var(--ink3);margin-top:10px;}
+  .foot{margin-top:44px;padding-top:16px;border-top:1px solid var(--line);
+    font-size:11px;color:var(--ink3);font-family:var(--mono);line-height:1.8;}
+  @media(max-width:760px){
+    #tm{height:340px;}
+    .flow{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">產業情報台
+      <small>SECTOR INTELLIGENCE · PHASE 1 · 樣板資料 DEMO</small>
+    </div>
+    <div class="index-quote">
+      <div class="index-val" id="idxVal">—</div>
+      <div class="index-chg" id="idxChg">—</div>
+    </div>
+  </div>
+
+  <div class="ctry-tabs" id="ctryTabs"></div>
+
+  <!-- 板塊熱力圖 -->
+  <div class="block">
+    <p class="section-label">板塊熱力圖 · <span id="hmHint"></span>
+      <span class="tag">TREEMAP</span></p>
+    <div id="tm"></div>
+    <div class="legend"><span>跌</span><span class="bar" id="legendBar"></span><span>漲</span>
+      <span style="margin-left:6px;">-3% ← 0 → +3%</span></div>
+  </div>
+
+  <!-- 板塊資金流向（極細主題 + 動能排序 + 日週月） -->
+  <div class="block">
+    <div class="mf-head">
+      <span class="section-label" style="margin:0;">板塊資金流向 · 極細產業主題 · 量價動能 = 成交量 × 漲跌幅</span>
+      <div class="day-tabs" id="mfPerTabs"></div>
+    </div>
+    <div class="flow-note">代理指標，非實際買賣超金額 · 動能長條為排序依據 · 依漲跌幅排序 · 量單位億元</div>
+    <div class="mf-hdr" id="mfHdr"></div>
+    <div id="flowlist"></div>
+  </div>
+
+  <!-- 供應鏈上中下游（主題可切換） -->
+  <div class="block">
+    <p class="section-label">產業上中下游 · 選擇主題查看跨國供應鏈
+      <span class="tag">SUPPLY CHAIN</span></p>
+    <div class="chain-tabs" id="chainTabs"></div>
+    <div class="chain-legend">
+      <span><span class="cdot" style="background:#f0997b;"></span>台</span>
+      <span><span class="cdot" style="background:#85b7eb;"></span>美</span>
+      <span><span class="cdot" style="background:#afa9ec;"></span>韓</span>
+      <span><span class="cdot" style="background:#5dcaa5;"></span>日</span>
+      <span><span class="cdot" style="background:#ef9f27;"></span>中</span>
+      <span><span class="cdot" style="background:#9fa0a0;"></span>歐/其他</span>
+      <span class="lstage-hint" id="stageHint"></span>
+    </div>
+    <div id="chainDemand"></div>
+    <div id="chainFlow"></div>
+    <div id="chainEnable"></div>
+  </div>
+
+  <!-- 供應鏈關係圖（力導向網路） -->
+  <div class="block">
+    <p class="section-label">供應鏈關係圖 · 公司連成一張網 · 大小＝連結數，外框＝漲跌，填色＝游別
+      <span class="tag">NETWORK</span></p>
+    <div class="gr-ctrls">
+      <span style="font-size:12px;color:var(--ink3);margin-right:2px;">主題</span>
+      <span class="gr-seg" id="grViewSeg"></span>
+      <span style="font-size:12px;color:var(--ink3);margin:0 2px 0 8px;">漲跌</span>
+      <span class="gr-seg" id="grPerSeg"></span>
+    </div>
+    <div class="gr-legend">
+      <span style="color:var(--ink3);">填色：</span>
+      <span><span class="gdot" style="background:#9b93dd;"></span>上游</span>
+      <span><span class="gdot" style="background:#5a9be5;"></span>中游</span>
+      <span><span class="gdot" style="background:#3fb890;"></span>下游</span>
+      <span style="margin-left:6px;color:var(--ink3);">外框：</span>
+      <span>跌</span>
+      <span style="width:80px;height:9px;border-radius:2px;background:linear-gradient(90deg,#0a7858,#5a606c,#ec403e);display:inline-block;"></span>
+      <span>漲</span>
+      <span style="margin-left:auto;color:var(--ink3);">大小＝連結數</span>
+    </div>
+    <div class="gr-box">
+      <svg id="grGraph"></svg>
+      <div class="gr-tip" id="grTip"></div>
+    </div>
+    <div class="gr-hint" id="grHint"></div>
+  </div>
+
+  <div class="foot">
+    資料來源：規劃接入 台股 證交所 OpenAPI · 美股 FMP/Alpha Vantage · 韓日 Yahoo Finance/twelvedata<br>
+    目前顯示為樣板資料，供 Phase 1 版面驗證使用 · 各市場更新頻率依當地盤後時間<br>
+    Phase 2 接入真實資料（分市場模組），Phase 3 上架 GitHub Pages，Phase 4 加自動排程
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // ====== 四市場主題級資料（樣板）======
+  var MK={
+    TW:{label:"台股",idx:"加權指數",idxVal:"18,204.51",idxChg:"+0.79%",up:"#e24b4a",down:"#1d9e75",sectors:[
+      {n:"AI伺服器",stk:[["鴻海",420,2.6],["廣達",380,3.4],["緯穎",260,2.1]]},
+      {n:"半導體代工",stk:[["台積電",1400,1.9],["聯電",180,0.8]]},
+      {n:"散熱",stk:[["奇鋐",160,3.6],["雙鴻",90,2.8]]},
+      {n:"光通訊/CPO",stk:[["聯亞",70,2.9],["上詮",50,2.4],["波若威",55,1.8]]},
+      {n:"IC設計",stk:[["聯發科",300,1.1],["瑞昱",80,0.7]]},
+      {n:"金融",stk:[["富邦金",260,-0.2],["國泰金",240,-0.4]]},
+      {n:"航運",stk:[["長榮",150,-2.1],["陽明",90,-1.5]]},
+      {n:"記憶體",stk:[["南亞科",90,-1.4],["華邦電",70,-0.9]]}
+    ]},
+    US:{label:"美股",idx:"S&P 500",idxVal:"5,842.10",idxChg:"+0.42%",up:"#1d9e75",down:"#e24b4a",sectors:[
+      {n:"AI晶片",stk:[["Nvidia",2900,3.1],["Broadcom",800,2.4],["AMD",260,1.9]]},
+      {n:"雲端資本支出",stk:[["Microsoft",3000,0.9],["Amazon",1900,1.7],["Alphabet",2000,1.2]]},
+      {n:"AI軟體/應用",stk:[["Palantir",180,4.2],["Meta",1300,2.0]]},
+      {n:"減肥藥GLP-1",stk:[["Lilly",700,-0.6],["Novo",400,-1.1]]},
+      {n:"電動車",stk:[["Tesla",800,-1.8],["Rivian",30,-2.4]]},
+      {n:"資安",stk:[["CrowdStrike",90,1.3],["Palo Alto",120,0.8]]},
+      {n:"核能/電力",stk:[["Vistra",60,2.2],["Constellation",90,1.7]]},
+      {n:"金融科技",stk:[["Visa",520,0.2],["JPMorgan",600,-0.3]]}
+    ]},
+    KR:{label:"韓股",idx:"KOSPI",idxVal:"2,684.30",idxChg:"+1.12%",up:"#e24b4a",down:"#1baf7a",sectors:[
+      {n:"HBM/記憶體",stk:[["SK海力士",1200,2.8],["三星電子",4000,1.6]]},
+      {n:"AI晶圓代工",stk:[["三星電子",4000,1.6],["DB HiTek",80,0.9]]},
+      {n:"電池材料",stk:[["LG新能源",600,-1.2],["POSCO Future M",150,-1.8]]},
+      {n:"電動車",stk:[["現代汽車",500,0.7],["起亞",350,0.5]]},
+      {n:"K-生技",stk:[["Samsung Bio",400,-0.6],["Celltrion",250,0.3]]},
+      {n:"造船",stk:[["HD現代重工",200,2.4],["韓華海洋",120,1.9]]},
+      {n:"國防",stk:[["韓華Aerospace",180,3.1],["現代Rotem",90,2.2]]},
+      {n:"K-內容娛樂",stk:[["Hybe",120,-0.9],["JYP",60,-1.4]]}
+    ]},
+    JP:{label:"日股",idx:"日經225",idxVal:"39,420.80",idxChg:"+0.65%",up:"#e24b4a",down:"#1baf7a",sectors:[
+      {n:"半導體設備",stk:[["東京威力",900,2.2],["Advantest",700,3.0],["DISCO",400,1.8]]},
+      {n:"AI材料(矽晶圓/ABF)",stk:[["信越化學",800,1.0],["SUMCO",200,0.7],["味之素",300,0.6]]},
+      {n:"機器人/自動化",stk:[["Fanuc",500,0.5],["Keyence",1100,0.8],["SMC",400,0.3]]},
+      {n:"汽車",stk:[["豐田",2400,0.6],["本田",600,0.4]]},
+      {n:"國防",stk:[["三菱重工",400,2.6],["川崎重工",150,1.9]]},
+      {n:"電子零組件",stk:[["Sony",1300,1.3],["村田",500,0.9]]},
+      {n:"金融(升息受惠)",stk:[["三菱UFJ",900,-0.3],["三井住友",700,-0.4]]},
+      {n:"商社",stk:[["三菱商事",700,-0.7],["伊藤忠",600,-0.5]]}
+    ]}
+  };
+
+  var MFLOW = {
+    TW:{themes:[
+      {n:"矽光子CPO封裝",d:4.8,w:0.3,m:12.4,vol:{d:186,w:920,m:3810}},
+      {n:"FAU光耦合",d:4.2,w:-1.1,m:9.8,vol:{d:64,w:310,m:1240}},
+      {n:"800G/1.6T光模組",d:3.9,w:2.4,m:15.2,vol:{d:142,w:680,m:2760}},
+      {n:"CoWoS先進封裝",d:3.1,w:1.8,m:8.6,vol:{d:410,w:1980,m:8200}},
+      {n:"液冷散熱",d:2.9,w:3.6,m:18.4,vol:{d:238,w:1120,m:4680}},
+      {n:"HBM記憶體",d:2.4,w:-0.8,m:6.2,vol:{d:96,w:470,m:1920}},
+      {n:"ASIC設計服務",d:2.1,w:1.2,m:4.9,vol:{d:178,w:840,m:3480}},
+      {n:"矽晶圓代工",d:1.9,w:0.8,m:5.4,vol:{d:1420,w:6800,m:28400}},
+      {n:"ABF載板",d:1.4,w:-0.6,m:3.1,vol:{d:88,w:420,m:1740}},
+      {n:"HVDC/48V電源",d:1.1,w:2.2,m:7.8,vol:{d:124,w:590,m:2420}},
+      {n:"RISC-V IP",d:0.7,w:-1.4,m:2.3,vol:{d:42,w:210,m:860}},
+      {n:"AI伺服器組裝",d:0.2,w:1.6,m:4.2,vol:{d:520,w:2480,m:10200}},
+      {n:"被動元件",d:-0.6,w:-1.2,m:-2.1,vol:{d:64,w:320,m:1320}},
+      {n:"面板驅動IC",d:-1.3,w:-2.4,m:-4.8,vol:{d:38,w:190,m:780}},
+      {n:"航運",d:-2.4,w:-3.1,m:-6.2,vol:{d:88,w:440,m:1820}}
+    ]},
+    US:{themes:[
+      {n:"AI晶片GPU",d:3.1,w:2.4,m:11.2,vol:{d:2900,w:14200,m:58000}},
+      {n:"ASIC自研晶片",d:2.8,w:1.9,m:9.4,vol:{d:820,w:3900,m:16200}},
+      {n:"雲端資本支出",d:1.4,w:1.7,m:7.1,vol:{d:3000,w:14800,m:61000}},
+      {n:"AI軟體/Agent",d:4.2,w:3.1,m:16.8,vol:{d:640,w:3100,m:12800}},
+      {n:"矽光子CPO",d:3.6,w:2.2,m:13.4,vol:{d:410,w:1980,m:8100}},
+      {n:"HBM",d:2.4,w:-0.8,m:6.2,vol:{d:520,w:2500,m:10400}},
+      {n:"液冷資料中心",d:2.9,w:3.4,m:14.2,vol:{d:280,w:1360,m:5600}},
+      {n:"減肥藥GLP-1",d:-0.6,w:-1.1,m:3.2,vol:{d:700,w:3400,m:14000}},
+      {n:"核能SMR",d:2.2,w:1.7,m:12.6,vol:{d:180,w:880,m:3600}},
+      {n:"電力基建",d:1.1,w:0.9,m:5.4,vol:{d:320,w:1560,m:6400}},
+      {n:"資安",d:1.3,w:0.8,m:4.1,vol:{d:290,w:1420,m:5800}},
+      {n:"量子運算",d:-1.4,w:-2.6,m:8.9,vol:{d:90,w:440,m:1820}}
+    ]},
+    KR:{themes:[
+      {n:"HBM記憶體",d:2.8,w:1.4,m:9.6,vol:{d:1200,w:5800,m:24000}},
+      {n:"DRAM",d:1.6,w:-0.8,m:4.2,vol:{d:4000,w:19000,m:78000}},
+      {n:"AI晶圓代工",d:1.9,w:0.9,m:5.1,vol:{d:680,w:3300,m:13600}},
+      {n:"CXL",d:3.4,w:2.2,m:14.8,vol:{d:180,w:880,m:3600}},
+      {n:"電池正極材料",d:-1.8,w:-2.4,m:-5.2,vol:{d:150,w:740,m:3000}},
+      {n:"電池電芯",d:-1.2,w:-1.6,m:-3.8,vol:{d:600,w:2900,m:12000}},
+      {n:"電動車",d:0.7,w:0.5,m:2.4,vol:{d:500,w:2400,m:9800}},
+      {n:"造船",d:2.4,w:3.1,m:16.2,vol:{d:200,w:980,m:4000}},
+      {n:"國防",d:3.1,w:2.6,m:18.4,vol:{d:180,w:880,m:3600}},
+      {n:"K-生技",d:-0.6,w:0.3,m:2.1,vol:{d:400,w:1960,m:8000}},
+      {n:"K-內容娛樂",d:-0.9,w:-1.4,m:3.6,vol:{d:120,w:590,m:2400}}
+    ]},
+    JP:{themes:[
+      {n:"半導體設備",d:3.0,w:2.2,m:12.8,vol:{d:900,w:4400,m:18000}},
+      {n:"矽晶圓材料",d:1.0,w:0.7,m:4.2,vol:{d:800,w:3900,m:16000}},
+      {n:"ABF載板",d:0.6,w:-0.4,m:2.8,vol:{d:300,w:1460,m:6000}},
+      {n:"測試設備",d:3.0,w:2.6,m:14.2,vol:{d:700,w:3400,m:14000}},
+      {n:"機器人/自動化",d:0.5,w:0.8,m:5.6,vol:{d:1000,w:4900,m:20000}},
+      {n:"功率半導體",d:1.4,w:1.1,m:6.2,vol:{d:400,w:1960,m:8000}},
+      {n:"汽車",d:0.6,w:0.4,m:2.1,vol:{d:2400,w:11600,m:48000}},
+      {n:"國防",d:2.6,w:3.4,m:19.2,vol:{d:400,w:1960,m:8000}},
+      {n:"商社",d:-0.7,w:-0.5,m:3.4,vol:{d:700,w:3400,m:14000}},
+      {n:"工具機/機械",d:0.3,w:-0.6,m:2.8,vol:{d:400,w:1960,m:8000}}
+    ]}
+  };
+
+  var cur="TW", curMfPer="d";
+  var tmChart=echarts.init(document.getElementById("tm"),null,{renderer:"canvas"});
+
+  function colFn(chg,up,down){var t=Math.max(-3,Math.min(3,chg))/3;
+    function h(x){return [parseInt(x.slice(1,3),16),parseInt(x.slice(3,5),16),parseInt(x.slice(5,7),16)];}
+    var b=[38,42,52],tg=h(t>=0?up:down),f=Math.abs(t);
+    return "rgb("+Math.round(b[0]+(tg[0]-b[0])*f)+","+Math.round(b[1]+(tg[1]-b[1])*f)+","+Math.round(b[2]+(tg[2]-b[2])*f)+")";}
+
+  function renderHeatmap(m){
+    var up=m.up,down=m.down;
+    var tmData;
+    if(cur==="TW" && window.LIVE_TW && window.LIVE_TW.heatmap){
+      // 真實資料（data.json）：結構為 [{name,chg,value,children:[{name,value,chg}]}]
+      tmData=window.LIVE_TW.heatmap.map(function(s){
+        var kids=s.children.map(function(k){return {name:k.name,value:k.value,chg:k.chg,itemStyle:{color:colFn(k.chg,up,down)}};});
+        return {name:s.name,chg:s.chg,value:s.value,children:kids,itemStyle:{color:colFn(s.chg,up,down)}};});
+    } else {
+      // 樣板資料
+      tmData=m.sectors.map(function(s){
+        var kids=s.stk.map(function(k){return {name:k[0],value:k[1],chg:k[2],itemStyle:{color:colFn(k[2],up,down)}};});
+        var sum=0,ws=0;kids.forEach(function(k){sum+=k.value;ws+=k.value*k.chg;});
+        var chg=+(ws/sum).toFixed(2);
+        return {name:s.n,chg:chg,children:kids,itemStyle:{color:colFn(chg,up,down)}};});
+    }
+    tmChart.setOption({backgroundColor:"transparent",
+      tooltip:{formatter:function(i){var c=i.data.chg;return i.name+"<br/>權重 "+i.value+"<br/>"+(c>0?"+":"")+c+"%";},
+        backgroundColor:"#141821",borderColor:"#252b38",textStyle:{color:"#e6e9ef",fontSize:12}},
+      series:[{type:"treemap",roam:false,nodeClick:"zoomToNode",width:"100%",height:"100%",top:0,left:0,right:0,bottom:0,
+        breadcrumb:{show:true,top:2,itemStyle:{color:"#1a1f2b",borderColor:"#252b38",textStyle:{color:"#9aa3b2"}}},
+        levels:[{itemStyle:{gapWidth:3,borderColor:"#0d0f14",borderWidth:3},upperLabel:{show:true,height:20,color:"#e6e9ef",fontSize:11,fontWeight:600}},
+          {itemStyle:{gapWidth:2,borderColor:"#0d0f14",borderWidth:1}}],
+        label:{show:true,formatter:function(i){var c=i.data.chg;return "{n|"+i.name+"}\n{p|"+(c>0?"+":"")+c+"%}";},
+          rich:{n:{color:"#fff",fontSize:11,fontWeight:600,lineHeight:14},p:{color:"rgba(255,255,255,.9)",fontSize:10,fontFamily:"monospace"}}},
+        data:tmData}]},true);
+  }
+
+  function fmtVol(v){return v>=10000?(v/10000).toFixed(1)+"兆":v.toLocaleString();}
+  function renderFlow(m){
+    var up=m.up,down=m.down;
+    var mf=MFLOW[cur]?MFLOW[cur].themes:[];
+    var hdr=document.getElementById("mfHdr");
+    hdr.innerHTML="<span>#</span><span>產業主題</span><span>量價動能</span><span class='r'>漲跌幅</span><span class='r'>成交量</span>";
+    var rows=mf.map(function(t){return {n:t.n,chg:t[curMfPer],vol:t.vol[curMfPer],mom:+((t.vol[curMfPer]/100)*t[curMfPer]).toFixed(1)};})
+      .sort(function(a,b){return b.chg-a.chg;});
+    var momMax=Math.max.apply(null,rows.map(function(r){return Math.abs(r.mom);}))||1;
+    var volMax=Math.max.apply(null,rows.map(function(r){return r.vol;}))||1;
+    var fbox=document.getElementById("flowlist");fbox.innerHTML="";
+    rows.forEach(function(r,i){
+      var pos=r.chg>=0,c=pos?up:down;
+      var mpos=r.mom>=0,mc=mpos?up:down,mpct=Math.abs(r.mom)/momMax*100;
+      var row=document.createElement("div");row.className="mf-row";
+      row.innerHTML="<span class='mf-rank'>"+(i+1)+"</span>"+
+        "<span class='mf-name'>"+r.n+"</span>"+
+        "<div class='mf-mom' style='justify-content:"+(mpos?"flex-start":"flex-end")+";'><i style='width:"+mpct+"%;background:"+mc+";'></i><span class='mf-momval'>"+(mpos?"+":"")+r.mom+"</span></div>"+
+        "<div class='mf-chg' style='color:"+c+";'>"+(pos?"+":"")+r.chg.toFixed(1)+"%</div>"+
+        "<div class='mf-vol'><i style='width:"+Math.max(4,r.vol/volMax*100)+"%;'></i><span>"+fmtVol(r.vol)+"</span></div>";
+      fbox.appendChild(row);
+    });
+    var net=rows.reduce(function(a,d){return a+d.mom;},0);
+    var foot=document.createElement("div");foot.className="flow-foot";
+    foot.innerHTML="<span>← 流出 ／ 流入 →（"+m.label+" 配色）</span><span>全市場淨動能 "+(net>=0?"+":"")+net.toFixed(0)+"</span>";
+    fbox.appendChild(foot);
+  }
+
+  function render(){
+    var m=MK[cur];
+    document.getElementById("idxVal").textContent=m.idx+"  "+m.idxVal;
+    var chgEl=document.getElementById("idxChg");
+    var chgUp=m.idxChg.indexOf("-")<0;
+    chgEl.textContent=(chgUp?"▲ ":"▼ ")+m.idxChg;
+    chgEl.style.color=chgUp?m.up:m.down;
+    document.getElementById("idxVal").style.color=chgUp?m.up:m.down;
+    document.getElementById("hmHint").textContent="面積＝市值，顏色＝漲跌（"+m.label+"）· 點板塊可下鑽個股";
+    document.getElementById("legendBar").style.background=
+      "linear-gradient(90deg,"+m.down+",#2c2c2a,"+m.up+")";
+    renderHeatmap(m);renderFlow(m);
+  }
+
+  // 國家切換
+  var ctabs=document.getElementById("ctryTabs");
+  Object.keys(MK).forEach(function(k){var b=document.createElement("button");
+    b.textContent=MK[k].label;b.dataset.k=k;
+    b.onclick=function(){cur=k;syncCtry();render();};ctabs.appendChild(b);});
+  function syncCtry(){[].forEach.call(ctabs.children,function(b){b.className=b.dataset.k===cur?"on":"";});}
+
+  var mfptabs=document.getElementById("mfPerTabs");
+  [["d","日"],["w","週"],["m","月"]].forEach(function(x){var b=document.createElement("button");
+    b.textContent=x[1];b.dataset.p=x[0];
+    b.onclick=function(){curMfPer=x[0];syncMfPer();renderFlow(MK[cur]);};mfptabs.appendChild(b);});
+  function syncMfPer(){[].forEach.call(mfptabs.children,function(b){b.className=b.dataset.p===curMfPer?"on":"";});}
+
+  syncCtry();syncMfPer();render();
+
+  // 嘗試載入真實資料 data.json（GitHub Pages 上會有；本機雙擊沒有則維持樣板）
+  fetch("data.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+    if(j && j.heatmap){
+      window.LIVE_TW=j;
+      var sub=document.querySelector(".brand small");
+      if(sub) sub.textContent="SECTOR INTELLIGENCE · 台股熱力圖真實資料 · 更新 "+(j.updated||"");
+      if(cur==="TW") renderHeatmap(MK.TW);
+    }
+  }).catch(function(){/* 無 data.json，維持樣板 */});
+  window.addEventListener("resize",function(){tmChart.resize();});
+})();
+
+// ====== 供應鏈主題模組（獨立 IIFE，與圖表隔離）======
+(function(){
+  var CHAINS = {
+    ai:{label:"AI 算力",
+      demand:{label:"需求端 · 雲端資本支出",cos:[["微軟","us"],["Google","us"],["Amazon","us"],["Meta","us"]]},
+      up:[{role:"半導體設備",cos:[["ASML","x"],["東京威力","jp"],["Advantest","jp"],["DISCO","jp"]]},
+          {role:"矽晶圓/材料",cos:[["信越","jp"],["SUMCO","jp"],["環球晶","tw"],["味之素ABF","jp"]]},
+          {role:"IP/EDA",cos:[["Arm","x"],["Synopsys","us"],["Cadence","us"]]}],
+      mid:[{role:"晶圓代工",cos:[["台積電","tw"],["聯電","tw"],["Samsung","kr"]]},
+          {role:"CoWoS先進封裝",cos:[["台積電","tw"],["日月光","tw"],["京元電","tw"]]},
+          {role:"HBM記憶體",cos:[["SK海力士","kr"],["Samsung","kr"],["Micron","us"]]},
+          {role:"CPO/光通訊",cos:[["台積電","tw"],["聯亞","tw"],["波若威","tw"],["上詮","tw"]]}],
+      down:[{role:"GPU/加速器",cos:[["NVIDIA","us"],["AMD","us"],["博通","us"]]},
+          {role:"伺服器組裝",cos:[["廣達","tw"],["緯穎","tw"],["鴻海","tw"],["緯創","tw"]]},
+          {role:"散熱/電源",cos:[["奇鋐","tw"],["雙鴻","tw"],["台達電","tw"]]}],
+      enable:[{role:"EDA/IP 工具",cos:[["Synopsys","us"],["Cadence","us"],["Arm","x"]]},
+          {role:"AI 框架軟體",cos:[["CUDA","us"],["PyTorch","us"]]},
+          {role:"先進封裝材料",cos:[["味之素ABF","jp"],["Resonac","jp"]]}]},
+    cxl:{label:"CXL 記憶體互連",
+      demand:{label:"需求端 · 雲端資本支出（記憶體佔比 2024約8%→2026約30%）",cos:[["Microsoft","us"],["Amazon","us"],["Google","us"],["Meta","us"]]},
+      up:[{role:"IP 矽智財",stage:"now",cos:[["Synopsys","us"],["Cadence","us"],["創意GUC","tw"],["M31","tw"]]},
+          {role:"DRAM 顆粒原廠",stage:"now",cos:[["SK海力士","kr"],["三星","kr"],["美光","us"]]}],
+      mid:[{role:"控制晶片（咽喉）",stage:"now",cos:[["瀾起Montage","cn"],["Astera Labs","us"],["Marvell","us"],["Microchip","us"]]},
+          {role:"CXL 記憶體模組",stage:"now",cos:[["SK海力士","kr"],["三星","kr"],["美光","us"]]}],
+      down:[{role:"池化/交換器",stage:"soon",cos:[["XConn","us"],["瀾起","cn"]]},
+          {role:"伺服器整機",stage:"soon",cos:[["廣達","tw"],["緯穎","tw"],["Dell","us"]]},
+          {role:"雲端客戶（終端）",stage:"now",cos:[["Microsoft","us"],["Meta","us"]]}],
+      enable:[{role:"軟體/OS 支援",cos:[["Linux核心","x"],["Windows Server 2025","us"]]},
+          {role:"光互連(fabric)",stage:"later",cos:[["Broadcom","us"],["聯亞","tw"],["上詮","tw"]]}]},
+    ev:{label:"電動車",
+      demand:{label:"需求端 · 整車廠與消費者",cos:[["Tesla","us"],["BYD","cn"],["VW集團","x"],["Toyota","jp"]]},
+      up:[{role:"電池正極材料",cos:[["康普","tw"],["美琪瑪","tw"],["中碳","tw"],["住友金屬","jp"]]},
+          {role:"鋰/鎳礦",cos:[["Albemarle","us"],["贛鋒鋰業","cn"],["印尼鎳礦","x"]]},
+          {role:"功率半導體",cos:[["英飛凌","x"],["安森美","us"],["羅姆","jp"]]}],
+      mid:[{role:"電池芯/模組",cos:[["寧德時代","cn"],["LG新能源","kr"],["Panasonic","jp"]]},
+          {role:"驅動馬達",cos:[["富田","tw"],["和大","tw"],["日本電產","jp"]]},
+          {role:"三電/車電零組件",cos:[["台達電","tw"],["貿聯","tw"],["和碩","tw"]]}],
+      down:[{role:"整車製造",cos:[["Tesla","us"],["BYD","cn"],["鴻海MIH","tw"]]},
+          {role:"充電樁/基建",cos:[["起而行","tw"],["台達電","tw"],["ChargePoint","us"]]},
+          {role:"車用面板/座艙",cos:[["友達","tw"],["群創","tw"],["聯發科","tw"]]}],
+      enable:[{role:"電池管理BMS",cos:[["台達電","tw"],["致茂","tw"]]},
+          {role:"車用OS/軟體",cos:[["QNX","x"],["Android Auto","us"]]},
+          {role:"充電標準/介面",cos:[["CCS","x"],["NACS","us"]]}]},
+    space:{label:"低軌衛星/太空",
+      demand:{label:"需求端 · 衛星營運商",cos:[["Starlink","us"],["Amazon Leo","us"],["OneWeb","x"],["Telesat","x"]]},
+      up:[{role:"高頻元件GaAs/GaN",stage:"now",cos:[["穩懋","tw"],["全訊","tw"],["同欣電","tw"]]},
+          {role:"高頻材料/PCB",stage:"now",cos:[["台光電","tw"],["華通","tw"],["燿華","tw"]]},
+          {role:"射頻晶片",cos:[["Qorvo","us"],["ADI","us"],["STMicro","x"]]}],
+      mid:[{role:"發射服務",stage:"now",cos:[["SpaceX","us"],["Rocket Lab","us"],["Arianespace","x"]]},
+          {role:"衛星本體/封裝",stage:"soon",cos:[["群創FOPLP","tw"],["同欣電","tw"],["Lockheed","us"]]},
+          {role:"通訊模組",stage:"soon",cos:[["昇達科","tw"],["萊德光電","tw"]]}],
+      down:[{role:"地面站/終端設備",stage:"now",cos:[["啟碁","tw"],["台揚","tw"],["正文","tw"],["信錦","tw"]]},
+          {role:"衛星服務/落地",cos:[["Starlink","us"],["中華電信","tw"],["遠傳","tw"]]}],
+      enable:[{role:"地面測控軟體",cos:[["凌群","tw"],["新鼎","tw"]]},
+          {role:"太空級認證/測試",cos:[["耀登","tw"],["台灣檢驗","tw"]]},
+          {role:"雷射星間鏈路",stage:"soon",cos:[["Mynaric","x"],["Sony Space","jp"]]}]},
+    phone:{label:"智慧手機",
+      demand:{label:"需求端 · 品牌與消費者",cos:[["Apple","us"],["Samsung","kr"],["小米","cn"]]},
+      up:[{role:"晶圓代工",cos:[["台積電","tw"],["Samsung","kr"]]},
+          {role:"面板OLED",cos:[["三星顯示","kr"],["LG Display","kr"],["京東方","cn"]]},
+          {role:"記憶體",cos:[["SK海力士","kr"],["三星","kr"],["美光","us"]]}],
+      mid:[{role:"處理器SoC",cos:[["聯發科","tw"],["高通","us"],["Apple自研","us"]]},
+          {role:"鏡頭/光學",cos:[["大立光","tw"],["玉晶光","tw"],["舜宇","cn"]]},
+          {role:"被動元件/PCB",cos:[["國巨","tw"],["臻鼎","tw"],["村田","jp"]]}],
+      down:[{role:"組裝代工EMS",cos:[["鴻海","tw"],["和碩","tw"],["立訊","cn"]]},
+          {role:"品牌",cos:[["Apple","us"],["Samsung","kr"],["小米","cn"]]}],
+      enable:[{role:"行動OS",cos:[["iOS","us"],["Android","us"]]},
+          {role:"通訊基頻5G/6G",cos:[["高通","us"],["聯發科","tw"]]},
+          {role:"EDA工具",cos:[["Synopsys","us"],["Cadence","us"]]}]},
+    pc:{label:"電腦/筆電",
+      demand:{label:"需求端 · 品牌與企業採購",cos:[["HP","us"],["Dell","us"],["Lenovo","cn"],["Apple","us"]]},
+      up:[{role:"CPU/GPU",cos:[["Intel","us"],["AMD","us"],["NVIDIA","us"]]},
+          {role:"晶圓代工",cos:[["台積電","tw"],["Intel","us"]]},
+          {role:"面板/記憶體",cos:[["友達","tw"],["群創","tw"],["SK海力士","kr"]]}],
+      mid:[{role:"主機板/顯卡",cos:[["華碩","tw"],["技嘉","tw"],["微星","tw"]]},
+          {role:"機殼/散熱/電源",cos:[["奇鋐","tw"],["台達電","tw"],["光寶科","tw"]]},
+          {role:"連接器/PCB",cos:[["嘉澤","tw"],["健鼎","tw"],["金像電","tw"]]}],
+      down:[{role:"ODM組裝",cos:[["廣達","tw"],["仁寶","tw"],["緯創","tw"],["英業達","tw"]]},
+          {role:"品牌",cos:[["HP","us"],["Dell","us"],["Lenovo","cn"],["Acer","tw"],["Asus","tw"]]}],
+      enable:[{role:"作業系統",cos:[["Windows","us"],["macOS","us"]]},
+          {role:"BIOS/韌體",cos:[["AMI","us"],["Insyde","tw"]]},
+          {role:"介面標準",cos:[["PCIe","x"],["USB-IF","x"]]}]},
+    solar:{label:"太陽能",
+      demand:{label:"需求端 · 系統開發與電廠",cos:[["台電","tw"],["雲豹能源","tw"],["NextEra","us"]]},
+      up:[{role:"多晶矽料",cos:[["Wacker","x"],["OCI","kr"],["保利協鑫","cn"]]},
+          {role:"矽晶圓/晶錠",cos:[["中美晶","tw"],["合晶","tw"],["隆基","cn"]]},
+          {role:"耗材漿料/切割線",cos:[["碩禾","tw"],["達邁","tw"]]}],
+      mid:[{role:"太陽能電池片",cos:[["元晶","tw"],["茂迪","tw"],["通威","cn"]]},
+          {role:"模組",cos:[["聯合再生","tw"],["元晶","tw"],["First Solar","us"]]},
+          {role:"逆變器",cos:[["台達電","tw"],["盛齊綠能","tw"],["SolarEdge","x"]]}],
+      down:[{role:"系統建置/EPC",cos:[["雲豹能源","tw"],["永鑫能源","tw"]]},
+          {role:"電廠營運",cos:[["台電","tw"],["中租","tw"],["NextEra","us"]]}],
+      enable:[{role:"逆變器/併網軟體",cos:[["台達電","tw"],["SMA","x"]]},
+          {role:"認證/檢測",cos:[["TÜV","x"],["工研院","tw"]]},
+          {role:"EPC工程管理",cos:[["雲豹能源","tw"],["永鑫","tw"]]}]},
+    wind:{label:"離岸風電",
+      demand:{label:"需求端 · 開發商與電網",cos:[["沃旭","x"],["RWE","x"],["台電","tw"]]},
+      up:[{role:"鋼材/樹脂原料",cos:[["中鋼","tw"],["上緯","tw"],["浦項鋼鐵","kr"]]},
+          {role:"葉片/齒輪箱",cos:[["天力","tw"],["台朔重工","tw"],["ZF","x"]]},
+          {role:"電力設施",cos:[["華城","tw"],["士電","tw"],["中興電工","tw"]]}],
+      mid:[{role:"風機系統整機",cos:[["Vestas","x"],["Siemens Gamesa","x"],["GE Vernova","us"]]},
+          {role:"水下基礎",cos:[["世紀風電","tw"],["興達海基","tw"]]},
+          {role:"海纜/塔架",cos:[["華新麗華","tw"],["中鋼機械","tw"]]}],
+      down:[{role:"海事工程/安裝",cos:[["台船環海","tw"],["伯威海事","tw"]]},
+          {role:"風場營運/IPP",cos:[["沃旭","x"],["台電","tw"],["風睿能源","tw"]]}],
+      enable:[{role:"海事工程船隊",cos:[["台船環海","tw"],["伯威海事","tw"]]},
+          {role:"SCADA監控",cos:[["西門子","x"],["台達電","tw"]]},
+          {role:"認證/融資",cos:[["DNV","x"],["中信金","tw"]]}]},
+    vr:{label:"VR/AR",
+      demand:{label:"需求端 · 品牌與消費者",cos:[["Meta","us"],["Apple","us"],["Samsung","kr"]]},
+      up:[{role:"Micro-OLED面板",stage:"soon",cos:[["Sony","jp"],["視涯","cn"],["京東方","cn"]]},
+          {role:"光學鏡片/波導",stage:"now",cos:[["大立光","tw"],["玉晶光","tw"],["揚明光","tw"]]},
+          {role:"CMOS Si晶圓代工",stage:"now",cos:[["台積電","tw"]]}],
+      mid:[{role:"感測/眼球追蹤IC",cos:[["原相","tw"],["奇景","tw"],["Sony","jp"]]},
+          {role:"XR平台SoC",cos:[["高通","us"],["聯發科","tw"]]},
+          {role:"光學模組組裝",cos:[["舜宇","cn"],["歌爾","cn"],["佳世達","tw"]]}],
+      down:[{role:"整機組裝",stage:"now",cos:[["立訊","cn"],["廣達","tw"],["和碩","tw"]]},
+          {role:"品牌",cos:[["Meta","us"],["Apple","us"],["Samsung","kr"],["PICO","cn"]]}],
+      enable:[{role:"XR OS/SDK",cos:[["Meta Horizon","us"],["visionOS","us"]]},
+          {role:"空間運算軟體",cos:[["Unity","us"],["Unreal","us"]]},
+          {role:"光學檢測",cos:[["致茂","tw"],["由田","tw"]]}]}
+  };
+
+  var curChain="ai";
+  var stageMap={now:["st-now","現在出量"],soon:["st-soon","即將放量"],later:["st-later","待驗證"]};
+
+  function coTag(c){var cls="co-"+(["tw","us","kr","jp","cn"].indexOf(c[1])>=0?c[1]:"x");
+    return "<span class='co "+cls+"'>"+c[0]+"</span>";}
+  function nodeHtml(n){
+    var st="";
+    if(n.stage&&stageMap[n.stage]) st="<span class='rstage "+stageMap[n.stage][0]+"'>"+stageMap[n.stage][1]+"</span>";
+    return "<div class='node'><div class='role'><span>"+n.role+"</span>"+st+"</div>"+
+      "<div class='cos-tags'>"+n.cos.map(coTag).join("")+"</div></div>";
+  }
+  function colHtml(cls,title,en,nodes){
+    return "<div class='flow-col "+cls+"'><h3>"+title+"</h3><div class='sub'>"+en+"</div>"+
+      nodes.map(nodeHtml).join("")+"</div>";
+  }
+
+  function renderChain(){
+    var d=CHAINS[curChain];
+    var allNodes=d.up.concat(d.mid,d.down,d.enable||[]);
+    var hasStage=allNodes.some(function(n){return n.stage;});
+    document.getElementById("stageHint").innerHTML=hasStage?
+      "<span style='color:#5dcaa5;'>● 現在出量</span> <span style='color:#ef9f27;'>● 即將放量</span> <span style='color:var(--ink3);'>● 待驗證</span>":"";
+
+    var dem=document.getElementById("chainDemand");
+    if(d.demand){dem.innerHTML="<div class='chain-demand'><div class='dl'>"+d.demand.label+"</div>"+
+      "<div class='cos-tags'>"+d.demand.cos.map(coTag).join("")+"</div></div><div class='chain-arrow'>↓ 拉動需求</div>";}
+    else dem.innerHTML="";
+
+    document.getElementById("chainFlow").innerHTML="<div class='flow'>"+
+      colHtml("up","上游｜設計・材料・設備","UPSTREAM",d.up)+
+      colHtml("mid","中游｜關鍵零件・製造","MIDSTREAM",d.mid)+
+      colHtml("down","下游｜系統整合・客戶","DOWNSTREAM",d.down)+"</div>";
+
+    var en=document.getElementById("chainEnable");
+    if(d.enable){en.innerHTML="<div class='chain-enable'><div class='el'>跨全鏈賦能層 · 橫跨上中下游</div>"+
+      "<div class='chain-erow'>"+d.enable.map(function(n){
+        var st=n.stage&&stageMap[n.stage]?"<span class='rstage "+stageMap[n.stage][0]+"' style='margin-left:2px;'>"+stageMap[n.stage][1]+"</span>":"";
+        return "<div class='chain-eitem'><span class='en'>"+n.role+"</span>"+n.cos.map(coTag).join("")+st+"</div>";
+      }).join("")+"</div></div>";}
+    else en.innerHTML="";
+  }
+
+  var ctabs=document.getElementById("chainTabs");
+  Object.keys(CHAINS).forEach(function(k){var b=document.createElement("button");
+    b.textContent=CHAINS[k].label;b.dataset.k=k;
+    b.onclick=function(){curChain=k;syncChain();renderChain();};ctabs.appendChild(b);});
+  function syncChain(){[].forEach.call(ctabs.children,function(b){b.className=b.dataset.k===curChain?"on":"";});}
+  syncChain();renderChain();
+})();
+
+// ====== 供應鏈關係圖（力導向網路，獨立 IIFE）======
+(function(){
+  var G={
+    ai:{label:"AI算力",roles:{
+      "半導體設備":{tier:"up",cos:["ASML","東京威力","Advantest","DISCO"]},"矽晶圓/材料":{tier:"up",cos:["信越","SUMCO","環球晶","味之素ABF"]},"IP/EDA":{tier:"up",cos:["Arm","Synopsys","Cadence"]},
+      "晶圓代工":{tier:"mid",cos:["台積電","聯電","Samsung"]},"CoWoS封裝":{tier:"mid",cos:["台積電","日月光","京元電"]},"HBM記憶體":{tier:"mid",cos:["SK海力士","Samsung","Micron"]},"CPO/光通訊":{tier:"mid",cos:["聯亞","波若威","上詮"]},
+      "GPU/加速器":{tier:"down",cos:["NVIDIA","AMD","博通"]},"伺服器組裝":{tier:"down",cos:["廣達","緯穎","鴻海","緯創"]},"散熱/電源":{tier:"down",cos:["奇鋐","雙鴻","台達電"]}},
+      edges:[["半導體設備","晶圓代工"],["矽晶圓/材料","晶圓代工"],["IP/EDA","晶圓代工"],["IP/EDA","GPU/加速器"],["晶圓代工","CoWoS封裝"],["晶圓代工","GPU/加速器"],["CoWoS封裝","GPU/加速器"],["HBM記憶體","GPU/加速器"],["CPO/光通訊","伺服器組裝"],["GPU/加速器","伺服器組裝"],["散熱/電源","伺服器組裝"]]},
+    cxl:{label:"CXL",roles:{
+      "IP矽智財":{tier:"up",cos:["Synopsys","Cadence","創意GUC","M31"]},"DRAM原廠":{tier:"up",cos:["SK海力士","三星","美光"]},
+      "控制晶片":{tier:"mid",cos:["瀾起Montage","Astera Labs","Marvell","Microchip"]},"CXL模組":{tier:"mid",cos:["SK海力士","三星","美光"]},
+      "池化/交換器":{tier:"down",cos:["XConn","瀾起"]},"伺服器整機":{tier:"down",cos:["廣達","緯穎","Dell"]},"雲端客戶":{tier:"down",cos:["Microsoft","Meta"]}},
+      edges:[["IP矽智財","控制晶片"],["DRAM原廠","CXL模組"],["控制晶片","CXL模組"],["CXL模組","池化/交換器"],["CXL模組","伺服器整機"],["池化/交換器","伺服器整機"],["伺服器整機","雲端客戶"]]},
+    ev:{label:"電動車",roles:{
+      "電池正極材料":{tier:"up",cos:["康普","美琪瑪","中碳","住友金屬"]},"功率半導體":{tier:"up",cos:["英飛凌","安森美","羅姆"]},
+      "電池芯/模組":{tier:"mid",cos:["寧德時代","LG新能源","Panasonic"]},"驅動馬達":{tier:"mid",cos:["富田","和大","日本電產"]},"車電零組件":{tier:"mid",cos:["台達電","貿聯","和碩"]},
+      "整車製造":{tier:"down",cos:["Tesla","BYD","鴻海MIH"]},"車用面板":{tier:"down",cos:["友達","群創","聯發科"]}},
+      edges:[["電池正極材料","電池芯/模組"],["電池芯/模組","整車製造"],["驅動馬達","整車製造"],["功率半導體","車電零組件"],["車電零組件","整車製造"],["車用面板","整車製造"]]},
+    space:{label:"衛星",roles:{
+      "高頻元件":{tier:"up",cos:["穩懋","全訊","同欣電"]},"高頻材料/PCB":{tier:"up",cos:["台光電","華通","燿華"]},
+      "發射服務":{tier:"mid",cos:["SpaceX","Rocket Lab"]},"衛星本體":{tier:"mid",cos:["群創","Lockheed"]},"通訊模組":{tier:"mid",cos:["昇達科","萊德光電"]},
+      "地面設備":{tier:"down",cos:["啟碁","台揚","正文","信錦"]},"衛星服務":{tier:"down",cos:["Starlink","中華電信","遠傳"]}},
+      edges:[["高頻材料/PCB","高頻元件"],["高頻元件","衛星本體"],["高頻元件","通訊模組"],["衛星本體","發射服務"],["通訊模組","地面設備"],["發射服務","衛星服務"],["地面設備","衛星服務"]]},
+    phone:{label:"手機",roles:{
+      "晶圓代工":{tier:"up",cos:["台積電","Samsung"]},"面板OLED":{tier:"up",cos:["三星顯示","LG Display","京東方"]},"記憶體":{tier:"up",cos:["SK海力士","三星","美光"]},
+      "處理器SoC":{tier:"mid",cos:["聯發科","高通","Apple自研"]},"鏡頭/光學":{tier:"mid",cos:["大立光","玉晶光","舜宇"]},"被動元件":{tier:"mid",cos:["國巨","臻鼎","村田"]},
+      "組裝EMS":{tier:"down",cos:["鴻海","和碩","立訊"]},"品牌":{tier:"down",cos:["Apple","Samsung","小米"]}},
+      edges:[["晶圓代工","處理器SoC"],["處理器SoC","組裝EMS"],["鏡頭/光學","組裝EMS"],["被動元件","組裝EMS"],["面板OLED","組裝EMS"],["記憶體","組裝EMS"],["組裝EMS","品牌"]]},
+    pc:{label:"電腦",roles:{
+      "CPU/GPU":{tier:"up",cos:["Intel","AMD","NVIDIA"]},"面板/記憶體":{tier:"up",cos:["友達","群創","SK海力士"]},
+      "主機板/顯卡":{tier:"mid",cos:["華碩","技嘉","微星"]},"散熱/電源":{tier:"mid",cos:["奇鋐","台達電","光寶科"]},"連接器/PCB":{tier:"mid",cos:["嘉澤","健鼎","金像電"]},
+      "ODM組裝":{tier:"down",cos:["廣達","仁寶","緯創","英業達"]},"品牌":{tier:"down",cos:["HP","Dell","Lenovo","Acer","Asus"]}},
+      edges:[["CPU/GPU","主機板/顯卡"],["主機板/顯卡","ODM組裝"],["散熱/電源","ODM組裝"],["連接器/PCB","主機板/顯卡"],["面板/記憶體","ODM組裝"],["ODM組裝","品牌"]]},
+    solar:{label:"太陽能",roles:{
+      "多晶矽料":{tier:"up",cos:["Wacker","OCI","保利協鑫"]},"矽晶圓/晶錠":{tier:"up",cos:["中美晶","合晶","隆基"]},
+      "電池片":{tier:"mid",cos:["元晶","茂迪","通威"]},"模組":{tier:"mid",cos:["聯合再生","元晶","First Solar"]},"逆變器":{tier:"mid",cos:["台達電","盛齊綠能","SolarEdge"]},
+      "系統/EPC":{tier:"down",cos:["雲豹能源","永鑫能源"]},"電廠營運":{tier:"down",cos:["台電","中租","NextEra"]}},
+      edges:[["多晶矽料","矽晶圓/晶錠"],["矽晶圓/晶錠","電池片"],["電池片","模組"],["模組","系統/EPC"],["逆變器","系統/EPC"],["系統/EPC","電廠營運"]]},
+    wind:{label:"風電",roles:{
+      "鋼材/樹脂":{tier:"up",cos:["中鋼","上緯","浦項鋼鐵"]},"電力設施":{tier:"up",cos:["華城","士電","中興電工"]},
+      "風機整機":{tier:"mid",cos:["Vestas","Siemens Gamesa","GE Vernova"]},"水下基礎":{tier:"mid",cos:["世紀風電","興達海基"]},"海纜/塔架":{tier:"mid",cos:["華新麗華","中鋼機械"]},
+      "海事工程":{tier:"down",cos:["台船環海","伯威海事"]},"風場營運":{tier:"down",cos:["沃旭","台電","風睿能源"]}},
+      edges:[["鋼材/樹脂","水下基礎"],["鋼材/樹脂","海纜/塔架"],["風機整機","海事工程"],["水下基礎","海事工程"],["海纜/塔架","海事工程"],["電力設施","風場營運"],["海事工程","風場營運"]]},
+    vr:{label:"VR/AR",roles:{
+      "Micro-OLED":{tier:"up",cos:["Sony","視涯","京東方"]},"光學鏡片":{tier:"up",cos:["大立光","玉晶光","揚明光"]},"CMOS代工":{tier:"up",cos:["台積電"]},
+      "感測IC":{tier:"mid",cos:["原相","奇景"]},"XR平台SoC":{tier:"mid",cos:["高通","聯發科"]},"光學模組":{tier:"mid",cos:["舜宇","歌爾","佳世達"]},
+      "整機組裝":{tier:"down",cos:["立訊","廣達","和碩"]},"品牌":{tier:"down",cos:["Meta","Apple","Samsung","PICO"]}},
+      edges:[["CMOS代工","感測IC"],["CMOS代工","XR平台SoC"],["Micro-OLED","光學模組"],["光學鏡片","光學模組"],["感測IC","整機組裝"],["XR平台SoC","整機組裝"],["光學模組","整機組裝"],["整機組裝","品牌"]]}
+  };
+  var tierFill={up:"#9b93dd",mid:"#5a9be5",down:"#3fb890"},tierOrder={up:0,mid:1,down:2},curPer="d";
+  function chgOf(name,per){var seed=per==="w"?37:13,h=0;for(var i=0;i<name.length;i++){h=(h*31+name.charCodeAt(i)+seed)%997;}var base=(h/997)*8-4;return +(per==="w"?base*1.6:base).toFixed(1);}
+  function strokeOf(chg){var t=Math.max(-4,Math.min(4,chg))/4;function mix(a,b,f){return [Math.round(a[0]+(b[0]-a[0])*f),Math.round(a[1]+(b[1]-a[1])*f),Math.round(a[2]+(b[2]-a[2])*f)];}var base=[90,96,108],up=[236,64,62],down=[10,120,88];var c=t>=0?mix(base,up,t):mix(base,down,-t);return "rgb("+c[0]+","+c[1]+","+c[2]+")";}
+  function build(scope){var nm={},ls={},links=[];var keys=scope==="all"?Object.keys(G):[scope];
+    keys.forEach(function(ck){var c=G[ck];
+      Object.keys(c.roles).forEach(function(rn){var r=c.roles[rn];r.cos.forEach(function(co){
+        if(!nm[co])nm[co]={id:co,tier:r.tier,chains:{},roles:{},deg:0};nm[co].chains[c.label]=1;nm[co].roles[rn]=1;
+        if(tierOrder[r.tier]<tierOrder[nm[co].tier])nm[co].tier=r.tier;});});
+      c.edges.forEach(function(e){var f=c.roles[e[0]],t=c.roles[e[1]];if(!f||!t)return;
+        f.cos.forEach(function(a){t.cos.forEach(function(b){if(a===b)return;var k=a<b?a+"|"+b:b+"|"+a;if(ls[k])return;ls[k]=1;links.push({source:a,target:b});});});});
+    });
+    links.forEach(function(l){nm[l.source].deg++;nm[l.target].deg++;});
+    return {nodes:Object.values(nm),links:links};}
+
+  var svg=d3.select("#grGraph"),tip=d3.select("#grTip"),box=document.querySelector(".gr-box");
+  var W=box.clientWidth,H=box.clientHeight,g=svg.append("g"),sim;
+  function radius(d){return 5+Math.sqrt(d.deg)*3.2;}
+  svg.call(d3.zoom().scaleExtent([0.3,3]).on("zoom",function(ev){g.attr("transform",ev.transform);}));
+
+  function render(scope){
+    g.selectAll("*").remove();
+    var data=build(scope);
+    document.getElementById("grHint").textContent="目前顯示："+(scope==="all"?"全部主題":G[scope].label)+" · "+data.nodes.length+" 家公司 · "+data.links.length+" 條供貨關係（拖曳平移、滾輪縮放）";
+    var link=g.append("g").attr("stroke","#2a3142").attr("stroke-opacity",0.5).selectAll("line").data(data.links).join("line").attr("stroke-width",1);
+    var node=g.append("g").selectAll("g").data(data.nodes).join("g").style("cursor","pointer").call(d3.drag().on("start",ds).on("drag",dg).on("end",de));
+    node.append("circle").attr("r",radius).attr("fill",function(d){return tierFill[d.tier];}).attr("stroke",function(d){return strokeOf(chgOf(d.id,curPer));}).attr("stroke-width",3);
+    node.append("text").attr("class","gr-label").attr("x",function(d){return radius(d)+3;}).attr("y",4).text(function(d){return d.id;});
+    node.on("mouseenter",function(ev,d){var conn={};conn[d.id]=1;
+        data.links.forEach(function(l){var s=l.source.id||l.source,t=l.target.id||l.target;if(s===d.id)conn[t]=1;if(t===d.id)conn[s]=1;});
+        node.style("opacity",function(n){return conn[n.id]?1:0.12;});
+        link.style("stroke-opacity",function(l){var s=l.source.id||l.source,t=l.target.id||l.target;return(s===d.id||t===d.id)?0.9:0.03;}).style("stroke",function(l){var s=l.source.id||l.source,t=l.target.id||l.target;return(s===d.id||t===d.id)?"#3987e5":"#2a3142";});
+        var dc=chgOf(d.id,curPer);
+        tip.html("<div class='gtname'>"+d.id+"　<span style='color:"+(dc>=0?'#e24b4a':'#1d9e75')+";font-weight:400;font-size:11px;'>"+(dc>=0?"+":"")+dc+"%</span></div><div class='gtrow'>連結數 "+d.deg+" · "+({up:"上游",mid:"中游",down:"下游"}[d.tier])+"</div><div class='gtrow'>主題："+Object.keys(d.chains).join("、")+"</div><div class='gtrow'>角色："+Object.keys(d.roles).slice(0,5).join("、")+"</div>").style("opacity",1);})
+      .on("mousemove",function(ev){var r=box.getBoundingClientRect();tip.style("left",(ev.clientX-r.left+14)+"px").style("top",(ev.clientY-r.top+14)+"px");})
+      .on("mouseleave",function(){node.style("opacity",1);link.style("stroke-opacity",0.5).style("stroke","#2a3142");tip.style("opacity",0);});
+    sim=d3.forceSimulation(data.nodes)
+      .force("link",d3.forceLink(data.links).id(function(d){return d.id;}).distance(scope==="all"?80:110).strength(0.35))
+      .force("charge",d3.forceManyBody().strength(scope==="all"?-160:-320))
+      .force("center",d3.forceCenter(W/2,H/2))
+      .force("collide",d3.forceCollide().radius(function(d){return radius(d)+10;}))
+      .on("tick",function(){link.attr("x1",function(d){return d.source.x;}).attr("y1",function(d){return d.source.y;}).attr("x2",function(d){return d.target.x;}).attr("y2",function(d){return d.target.y;});
+        node.attr("transform",function(d){return "translate("+d.x+","+d.y+")";});});
+  }
+  function ds(ev,d){if(!ev.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y;}
+  function dg(ev,d){d.fx=ev.x;d.fy=ev.y;}
+  function de(ev,d){if(!ev.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}
+
+  var views=[["ai","AI算力"],["cxl","CXL"],["ev","電動車"],["space","衛星"],["phone","手機"],["pc","電腦"],["solar","太陽能"],["wind","風電"],["vr","VR/AR"],["all","★全景"]];
+  var vseg=document.getElementById("grViewSeg");
+  views.forEach(function(v){var b=document.createElement("button");b.textContent=v[1];b.dataset.v=v[0];
+    b.onclick=function(){[].forEach.call(vseg.children,function(x){x.className=x.dataset.v===v[0]?"on":"";});render(v[0]);};vseg.appendChild(b);});
+  vseg.children[0].className="on";
+  var pseg=document.getElementById("grPerSeg");
+  [["d","日"],["w","週"]].forEach(function(x){var b=document.createElement("button");b.textContent=x[1];b.dataset.p=x[0];
+    b.onclick=function(){curPer=x[0];[].forEach.call(pseg.children,function(y){y.className=y.dataset.p===x[0]?"on":"";});
+      g.selectAll("circle").attr("stroke",function(d){return d&&d.id?strokeOf(chgOf(d.id,curPer)):this.getAttribute("stroke");});};pseg.appendChild(b);});
+  pseg.children[0].className="on";
+  render("ai");
+})();
+</script>
+</body>
+</html>
