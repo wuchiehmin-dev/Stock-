@@ -107,25 +107,9 @@ def build_industry_lookup():
 
 
 def fetch_quotes():
-    """回傳 list[dict]，每檔含 code/name/close/change_pct/volume。
-    非交易日（假日）證交所可能回空白或非 JSON，此時回傳 None 視為無資料。"""
-    req = urllib.request.Request(STOCK_DAY_ALL, headers=UA)
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            raw = r.read().decode("utf-8").strip()
-    except Exception as e:
-        print(f"  個股成交連線失敗（可能為非交易日）：{e}")
-        return None
-    if not raw:
-        print("  個股成交回傳空白（非交易日或尚未收盤）。")
-        return None
-    try:
-        data = json.loads(raw)
-    except ValueError:
-        print("  個股成交回傳非 JSON（非交易日或來源維護中）。")
-        return None
+    """回傳 list[dict]，每檔含 code/name/close/change_pct/volume。"""
+    data = fetch_json(STOCK_DAY_ALL)
     if data.get("stat") != "OK" or "data" not in data:
-        print(f"  個股成交 stat 非 OK：{data.get('stat')}")
         return None
     fields = data.get("fields", [])
     # 依欄位名稱定位索引，避免順序變動
