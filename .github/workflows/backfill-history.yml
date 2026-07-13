@@ -1,0 +1,39 @@
+name: 回補歷史資料（手動一次性）
+
+# 只能手動觸發：回補過去 21 個交易日的主題歷史，讓週/月動能立即有效。
+# 跑一次即可，之後由每日排程（update-data.yml）接續累積。
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取出 repo
+        uses: actions/checkout@v4
+
+      - name: 設定 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 回補歷史並重算 data.json
+        run: |
+          python backfill_history.py
+          python fetch_data.py
+
+      - name: commit 回補結果
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain data.json history_tw.json)" ]; then
+            git add data.json history_tw.json
+            git commit -m "回補主題歷史資料 $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "回補完成並推送。"
+          else
+            echo "無變動。"
+          fi
