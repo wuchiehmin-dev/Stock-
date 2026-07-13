@@ -366,12 +366,12 @@ def compound_chg(chgs):
     return round((acc - 1) * 100, 2)
 
 
-def build_theme_payload(quotes, data_date):
-    """依 master_tw.json 主題聚合真實量價，並用 history_tw.json 累積算週/月動能。
-    回傳 (themes_out, stock_chg_out)；主檔缺失時回傳 (None, None)。"""
+def compute_day_record(quotes):
+    """單日主題聚合。回傳 (day_themes, day_stocks, themes_out)；主檔缺失回 (None, None, None)。
+    回補歷史腳本也共用這個函式。"""
     master = load_master_themes()
     if not master:
-        return None, None
+        return None, None, None
 
     qmap = {q["code"]: q for q in quotes}
 
@@ -408,6 +408,15 @@ def build_theme_payload(quotes, data_date):
             "vol": {"d": vol_d},
             "stocks": stocks_out,
         })
+    return day_themes, day_stocks, themes_out
+
+
+def build_theme_payload(quotes, data_date):
+    """依 master_tw.json 主題聚合真實量價，並用 history_tw.json 累積算週/月動能。
+    回傳 (themes_out, stock_chg_out)；主檔缺失時回傳 (None, None)。"""
+    day_themes, day_stocks, themes_out = compute_day_record(quotes)
+    if themes_out is None:
+        return None, None
 
     # 更新歷史（以 data_date 為 key，重跑同一天會覆蓋不會重複累積）
     history = load_history()
@@ -467,9 +476,10 @@ def _pick(row, *keys):
     return None
 
 
-def fetch_tpex_quotes(data_date):
+def fetch_tpex_quotes(data_date, prefer_openapi=True):
     """抓上櫃全部個股當日收盤（櫃買中心）。回傳與 fetch_quotes 相同結構的 list 或 None。
-    先試 OpenAPI（僅最新交易日，需日期吻合），不合再用 dailyQuotes 指定日期回補。"""
+    先試 OpenAPI（僅最新交易日，需日期吻合），不合再用 dailyQuotes 指定日期回補。
+    回補歷史時傳 prefer_openapi=False 直接走指定日期端點。"""
     y, m, d = data_date.split("-")
     roc_slash = f"{int(y) - 1911}/{m}/{d}"          # 115/07/13
     roc_compact = roc_slash.replace("/", "")         # 1150713
@@ -490,25 +500,26 @@ def fetch_tpex_quotes(data_date):
                 "volume": vol, "market": "OTC"}
 
     # 1) OpenAPI：回傳整個 list，各列含 Date（民國 1150713）
-    data = fetch_json_retry(TPEX_DAILY, "上櫃收盤 OpenAPI", tries=2)
-    if isinstance(data, list) and data:
-        row_date = str(_pick(data[0], "Date") or "").replace("/", "")
-        if not row_date or row_date == roc_compact:
-            out = []
-            for row in data:
-                q = norm(_pick(row, "SecuritiesCompanyCode", "Code"),
-                         _pick(row, "CompanyName", "Name"),
-                         _pick(row, "Close"), _pick(row, "Change"),
-                         _pick(row, "TradingShares", "TradingVolume", "TradeVolume"))
-                if q:
-                    out.append(q)
-            if out:
-                return out
-        else:
-            print(f"  上櫃 OpenAPI 日期 {row_date} 與 {roc_compact} 不符，改用日期回補。")
+    if prefer_openapi:
+        data = fetch_json_retry(TPEX_DAILY, "上櫃收盤 OpenAPI", tries=2)
+        if isinstance(data, list) and data:
+            row_date = str(_pick(data[0], "Date") or "").replace("/", "")
+            if not row_date or row_date == roc_compact:
+                out = []
+                for row in data:
+                    q = norm(_pick(row, "SecuritiesCompanyCode", "Code"),
+                             _pick(row, "CompanyName", "Name"),
+                             _pick(row, "Close"), _pick(row, "Change"),
+                             _pick(row, "TradingShares", "TradingVolume", "TradeVolume"))
+                    if q:
+                        out.append(q)
+                if out:
+                    return out
+            else:
+                print(f"  上櫃 OpenAPI 日期 {row_date} 與 {roc_compact} 不符，改用日期回補。")
+        time.sleep(2)
 
     # 2) dailyQuotes 指定日期（結構為 tables[{fields,data}]，欄位名容錯）
-    time.sleep(2)
     data = fetch_json_retry(TPEX_DAILY_BY_DATE.format(roc=roc_slash), f"上櫃收盤 {roc_slash}", tries=2)
     if not isinstance(data, dict):
         return None
