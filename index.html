@@ -512,13 +512,18 @@
           if(v.d!=null)window.LIVE_CHG[c]=v.d;
           if(v.w!=null)window.LIVE_CHG_W[c]=v.w;});
       }
+      // 大盤加權指數：覆蓋 MK.TW 樣板值，render() 時更新標題列
+      if(j.index && j.index.close!=null){
+        MK.TW.idxVal=j.index.close.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+        if(j.index.chg_pct!=null) MK.TW.idxChg=(j.index.chg_pct>=0?"+":"")+j.index.chg_pct.toFixed(2)+"%";
+      }
       var sub=document.querySelector(".brand small");
       if(sub) sub.textContent="SECTOR INTELLIGENCE · 台股真實資料 · "+(j.data_date||j.updated||"");
       if(j.themes){
         var note=document.querySelector(".flow-note");
         if(note) note.textContent="真實資料（"+(j.data_date||"")+"）· 動能 = 成交金額 × 漲跌幅 · 週/月為交易日累積 · 量單位億元";
       }
-      if(cur==="TW"){renderHeatmap(MK.TW);renderFlow(MK.TW);}
+      if(cur==="TW")render();  // 連同標題列指數一起重繪
       if(window.rerenderGraph)window.rerenderGraph();
     }
   }).catch(function(){/* 無 data.json，維持樣板 */});

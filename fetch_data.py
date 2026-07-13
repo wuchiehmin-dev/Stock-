@@ -32,6 +32,8 @@ STOCK_DAY_ALL = "https://www.twse.com.tw/exchangeReport/STOCK_DAY_ALL?response=j
 COMPANY_LIST = "https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv"
 # 可指定日期、一次抓全部個股當日成交（用於假日回補最近交易日）
 MI_INDEX = "https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&type=ALLBUT0999&date={date}"
+# 市場成交資訊（含每日加權指數收盤與漲跌點數），date 給該月任一天即回整月
+FMTQIK = "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date={date}"
 
 # 證交所產業別「代碼」→ 名稱（t187ap03_L.csv 的產業別欄位給的是代碼）
 INDUSTRY_CODE2NAME = {
@@ -443,6 +445,44 @@ def build_theme_payload(quotes, data_date):
     return themes_out, stock_chg_out
 
 
+def fetch_index(data_date):
+    """抓 data_date 當日的加權指數收盤與漲跌%（FMTQIK 市場成交資訊）。
+    回傳 {"name","close","change","chg_pct"} 或 None。"""
+    ymd = data_date.replace("-", "")
+    data = fetch_json_retry(FMTQIK.format(date=ymd), "大盤指數 FMTQIK", tries=2)
+    if not data or data.get("stat") != "OK":
+        return None
+    fields = data.get("fields", [])
+
+    def idx(*names):
+        for n in names:
+            for i, f in enumerate(fields):
+                if n in f:
+                    return i
+        return None
+
+    i_date = idx("日期")
+    i_close = idx("發行量加權股價指數", "加權股價指數", "加權指數")
+    i_chg = idx("漲跌點數")
+    if i_date is None or i_close is None:
+        return None
+    y, m, d = data_date.split("-")
+    roc_date = f"{int(y) - 1911}/{m}/{d}"  # 證交所用民國年 115/07/13
+    for row in data.get("data", []):
+        if str(row[i_date]).strip() != roc_date:
+            continue
+        close = to_float(row[i_close])
+        change = to_float(row[i_chg]) if i_chg is not None else None
+        if close is None:
+            return None
+        chg_pct = None
+        if change is not None and (close - change):
+            chg_pct = round(change / (close - change) * 100, 2)
+        return {"name": "加權指數", "close": close, "change": change, "chg_pct": chg_pct}
+    print(f"  FMTQIK 找不到 {roc_date} 的資料列。")
+    return None
+
+
 def main():
     now = datetime.now(TZ)
     print(f"[{now.isoformat()}] 開始抓取台股資料 ...")
@@ -491,6 +531,13 @@ def main():
     if themes is not None:
         print(f"  主題聚合：{len(themes)} 個主題、{len(stock_chg)} 檔個股漲跌")
 
+    time.sleep(2)  # 禮貌間隔
+    market_index = fetch_index(data_date)
+    if market_index:
+        print(f"  加權指數：{market_index['close']}（{market_index['chg_pct']}%）")
+    else:
+        print("  ! 加權指數抓取失敗，前端將維持上次/樣板值。")
+
     payload = {
         "updated": now.strftime("%Y-%m-%d %H:%M"),
         "data_date": data_date,
@@ -502,6 +549,8 @@ def main():
     if themes is not None:
         payload["themes"] = themes       # 資金流向極細主題（真實量價）
         payload["stock_chg"] = stock_chg  # 個股漲跌 {code:{d,w}}，供關係圖配色
+    if market_index:
+        payload["index"] = market_index   # 大盤加權指數（標題列用）
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
