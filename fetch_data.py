@@ -125,23 +125,34 @@ def build_industry_lookup():
     return lookup
 
 
+def fetch_json_retry(url, label, tries=3, wait=8):
+    """抓 JSON，遇到非 JSON（證交所偶爾擋雲端 IP 回 HTML）或連線失敗時重試。
+    回傳 dict 或 None。"""
+    for attempt in range(1, tries + 1):
+        req = urllib.request.Request(url, headers=UA)
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                raw = r.read().decode("utf-8").strip()
+        except Exception as e:
+            print(f"  {label} 連線失敗（第{attempt}次）：{e}")
+            raw = None
+        if raw:
+            try:
+                return json.loads(raw)
+            except ValueError:
+                print(f"  {label} 回傳非 JSON（第{attempt}次），開頭：{raw[:60]!r}")
+        elif raw == "":
+            print(f"  {label} 回傳空白（第{attempt}次）。")
+        if attempt < tries:
+            time.sleep(wait)
+    return None
+
+
 def fetch_quotes():
     """回傳 list[dict]，每檔含 code/name/close/change_pct/volume。
     非交易日（假日）證交所可能回空白或非 JSON，此時回傳 None 視為無資料。"""
-    req = urllib.request.Request(STOCK_DAY_ALL, headers=UA)
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            raw = r.read().decode("utf-8").strip()
-    except Exception as e:
-        print(f"  個股成交連線失敗（可能為非交易日）：{e}")
-        return None
-    if not raw:
-        print("  個股成交回傳空白（非交易日或尚未收盤）。")
-        return None
-    try:
-        data = json.loads(raw)
-    except ValueError:
-        print("  個股成交回傳非 JSON（非交易日或來源維護中）。")
+    data = fetch_json_retry(STOCK_DAY_ALL, "個股成交")
+    if data is None:
         return None
     if data.get("stat") != "OK" or "data" not in data:
         print(f"  個股成交 stat 非 OK：{data.get('stat')}")
@@ -303,19 +314,11 @@ def parse_mi_index(data):
 def fetch_quotes_by_date(yyyymmdd):
     """用 MI_INDEX 抓指定日期全市場個股。非交易日回 None。"""
     url = MI_INDEX.format(date=yyyymmdd)
-    req = urllib.request.Request(url, headers=UA)
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            raw = r.read().decode("utf-8").strip()
-    except Exception:
-        return None
-    if not raw:
-        return None
-    try:
-        data = json.loads(raw)
-    except ValueError:
+    data = fetch_json_retry(url, f"MI_INDEX {yyyymmdd}", tries=2)
+    if data is None:
         return None
     if data.get("stat") != "OK":
+        print(f"  MI_INDEX {yyyymmdd} stat：{data.get('stat')}")
         return None
     return parse_mi_index(data)
 
@@ -460,10 +463,11 @@ def main():
         sys.exit(1)
 
     if not quotes:
-        # 當日無資料（假日/未收盤）→ 往回找最近一個交易日回補
-        print("  當日無成交，往回尋找最近交易日 ...")
+        # STOCK_DAY_ALL 失敗 → 改用 MI_INDEX 從「今天」往回找最近交易日
+        # （back=0 涵蓋交易日當天 STOCK_DAY_ALL 被擋、但 MI_INDEX 正常的情況）
+        print("  當日 STOCK_DAY_ALL 無資料，改用 MI_INDEX 從今天往回找 ...")
         used_date = None
-        for back in range(1, 8):
+        for back in range(0, 8):
             d = (now - timedelta(days=back)).strftime("%Y%m%d")
             time.sleep(2)  # 禮貌間隔
             q = fetch_quotes_by_date(d)
