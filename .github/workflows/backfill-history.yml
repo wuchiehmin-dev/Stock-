@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: 取出 repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # push 前 rebase 需要完整歷史
 
       - name: 設定 Python
         uses: actions/setup-python@v5
@@ -32,7 +34,14 @@ jobs:
           if [ -n "$(git status --porcelain data.json history_tw.json)" ]; then
             git add data.json history_tw.json
             git commit -m "回補主題歷史資料 $(date -u +'%Y-%m-%d %H:%M UTC')"
-            git push
+            # 執行期間 main 可能被排程推進 → rebase 後重試（衝突時保留本次重算的資料檔）
+            n=0
+            until git push; do
+              n=$((n+1))
+              if [ "$n" -ge 4 ]; then echo "重試 4 次仍失敗"; exit 1; fi
+              sleep 5
+              git pull --rebase -X theirs origin main
+            done
             echo "回補完成並推送。"
           else
             echo "無變動。"
