@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-一次性回補 history_tw.json 過去交易日的主題資料（上市 + 上櫃）。
+回補 history_tw.json 過去交易日的主題資料（上市 + 上櫃）。可重複執行、自動續跑。
 
-用途：讓「板塊資金流向」的週(5日)/月(21日)動能立即有完整歷史可算，
-不必等排程慢慢累積。跑一次即可，之後由每日排程接續。
+用途：讓「板塊資金流向」的週(5日)/月(21日)動能立即有完整歷史可算。
 
-資料源：
-  - 上市：TWSE MI_INDEX（可指定日期）
-  - 上櫃：TPEx dailyQuotes（可指定日期）
+證交所對雲端 IP 限流很兇（連續查 MI_INDEX 幾次就回 307），因此：
+  - 請求間隔拉長（PAUSE 秒）
+  - 偵測到疑似限流（連線/HTTP 錯誤、非 JSON）時，冷卻 60/180 秒再重試
+  - 冷卻後仍被擋就先收工，把已補到的天數 commit 起來；再跑一次會從缺的日期接續
+  - 已完整（含上櫃報價）的日期自動跳過，不重抓
 
-會覆蓋範圍內既有的日期（確保舊紀錄也含上櫃股），跑完請接著跑
-fetch_data.py 重算 data.json 的週/月數值。
+跑完請接著跑 fetch_data.py 重算 data.json 的週/月數值（workflow 已串好）。
 """
 
 import json
@@ -21,15 +21,33 @@ from datetime import datetime, timedelta
 
 import fetch_data as fd
 
-TARGET_DAYS = 22   # 今天 + 21 個歷史交易日，足夠算月動能
-MAX_LOOKBACK = 45  # 最多往回掃 45 個日曆日（涵蓋連假）
-PAUSE = 3          # 每個請求間隔秒數（證交所限每 5 秒 3 個 request）
+TARGET_DAYS = 22      # 今天 + 21 個歷史交易日，足夠算月動能
+MAX_LOOKBACK = 45     # 最多往回掃 45 個日曆日（涵蓋連假）
+PAUSE = 6             # 每個日期之間的基本間隔（秒）
+COOLDOWNS = [60, 180]  # 疑似限流時的冷卻梯度（秒）
+COMPLETE_STOCKS = 100  # 該日成分股報價達此數視為完整（含上櫃），跳過不重抓
+
+
+def fetch_day(ymd):
+    """抓單日上市報價，區分「休市」與「被限流」。
+    回傳 (quotes, blocked)：quotes=None 且 blocked=True 表示冷卻後仍被擋。"""
+    for i, cooldown in enumerate([0] + COOLDOWNS):
+        if cooldown:
+            print(f"  疑似被限流，冷卻 {cooldown}s 後重試（第{i}次）...")
+            time.sleep(cooldown)
+        quotes = fd.fetch_quotes_by_date(ymd)
+        if quotes:
+            return quotes, False
+        if fd.LAST_ERROR is None:
+            return None, False  # 來源正常回應但無資料 → 休市
+    return None, True
 
 
 def main():
     now = datetime.now(fd.TZ)
     history = fd.load_history()
     got = 0
+    blocked_stop = False
 
     for back in range(0, MAX_LOOKBACK + 1):
         if got >= TARGET_DAYS:
@@ -39,12 +57,22 @@ def main():
             continue
         ymd = day.strftime("%Y%m%d")
         date_key = day.strftime("%Y-%m-%d")
-        print(f"[{date_key}] 抓取中 ...")
 
+        prev = history.get(date_key)
+        if prev and len(prev.get("stocks", {})) >= COMPLETE_STOCKS:
+            got += 1
+            print(f"[{date_key}] 已完整（{len(prev['stocks'])} 檔），跳過。")
+            continue
+
+        print(f"[{date_key}] 抓取中 ...")
         time.sleep(PAUSE)
-        quotes = fd.fetch_quotes_by_date(ymd)
+        quotes, blocked = fetch_day(ymd)
+        if blocked:
+            print("  冷卻後仍被限流，先收工保留已補天數；稍後再跑一次即可接續。")
+            blocked_stop = True
+            break
         if not quotes:
-            print("  無上市資料（休市或來源無此日），跳過。")
+            print("  休市，跳過。")
             continue
 
         time.sleep(PAUSE)
@@ -71,8 +99,10 @@ def main():
         json.dump(history, f, ensure_ascii=False)
     print(f"history_tw.json 共 {len(dates)} 個交易日（{dates[-1]} ~ {dates[0]}）")
 
-    if got == 0:
-        print("! 一天都沒抓到，請檢查資料源。", file=sys.stderr)
+    if blocked_stop and len(dates) < TARGET_DAYS:
+        print(f"※ 尚缺 {TARGET_DAYS - len(dates)} 個交易日，過幾分鐘後再 Run 一次本 workflow 接續回補。")
+    if not dates:
+        print("! 一天都沒有，請檢查資料源。", file=sys.stderr)
         sys.exit(1)
 
 
