@@ -35,6 +35,11 @@ MI_INDEX = "https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&type=A
 # 市場成交資訊（含每日加權指數收盤與漲跌點數），date 給該月任一天即回整月
 FMTQIK = "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date={date}"
 
+# 櫃買中心（上櫃）資料源，皆免金鑰
+COMPANY_LIST_OTC = "https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv"  # 上櫃公司產業別
+TPEX_DAILY = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"  # 最新交易日全上櫃收盤
+TPEX_DAILY_BY_DATE = "https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes?date={roc}&response=json"  # 指定日期回補
+
 # 證交所產業別「代碼」→ 名稱（t187ap03_L.csv 的產業別欄位給的是代碼）
 INDUSTRY_CODE2NAME = {
     "01": "水泥工業", "02": "食品工業", "03": "塑膠工業", "04": "紡織纖維",
@@ -108,8 +113,13 @@ def to_float(s):
 
 
 def build_industry_lookup():
-    """回傳 {股票代號: 產業別} 對照。"""
+    """回傳 {股票代號: 產業別} 對照（上市 + 上櫃）。"""
     rows = fetch_csv(COMPANY_LIST)
+    try:
+        time.sleep(2)  # 禮貌間隔
+        rows += fetch_csv(COMPANY_LIST_OTC)
+    except Exception as e:
+        print(f"  上櫃產業別抓取失敗（僅用上市，略過）：{e}")
     lookup = {}
     # 欄位名稱可能是「公司代號」「產業別」，做容錯
     for row in rows:
@@ -445,6 +455,95 @@ def build_theme_payload(quotes, data_date):
     return themes_out, stock_chg_out
 
 
+def _pick(row, *keys):
+    """從 dict 容錯取值：key 完全相等或包含。"""
+    for k in keys:
+        if k in row:
+            return row[k]
+    for k in keys:
+        for rk in row:
+            if rk and k in rk:
+                return row[rk]
+    return None
+
+
+def fetch_tpex_quotes(data_date):
+    """抓上櫃全部個股當日收盤（櫃買中心）。回傳與 fetch_quotes 相同結構的 list 或 None。
+    先試 OpenAPI（僅最新交易日，需日期吻合），不合再用 dailyQuotes 指定日期回補。"""
+    y, m, d = data_date.split("-")
+    roc_slash = f"{int(y) - 1911}/{m}/{d}"          # 115/07/13
+    roc_compact = roc_slash.replace("/", "")         # 1150713
+
+    def norm(code, name, close, change, vol):
+        close = to_float(close)
+        vol = to_float(vol)
+        if not code or not str(code).strip().isdigit() or len(str(code).strip()) != 4:
+            return None
+        if close is None or vol is None:
+            return None
+        change = to_float(change)
+        chg_pct = None
+        if change is not None and (close - change):
+            chg_pct = round(change / (close - change) * 100, 2)
+        return {"code": str(code).strip(), "name": str(name or code).strip(),
+                "close": close, "change_pct": chg_pct if chg_pct is not None else 0.0,
+                "volume": vol, "market": "OTC"}
+
+    # 1) OpenAPI：回傳整個 list，各列含 Date（民國 1150713）
+    data = fetch_json_retry(TPEX_DAILY, "上櫃收盤 OpenAPI", tries=2)
+    if isinstance(data, list) and data:
+        row_date = str(_pick(data[0], "Date") or "").replace("/", "")
+        if not row_date or row_date == roc_compact:
+            out = []
+            for row in data:
+                q = norm(_pick(row, "SecuritiesCompanyCode", "Code"),
+                         _pick(row, "CompanyName", "Name"),
+                         _pick(row, "Close"), _pick(row, "Change"),
+                         _pick(row, "TradingShares", "TradingVolume", "TradeVolume"))
+                if q:
+                    out.append(q)
+            if out:
+                return out
+        else:
+            print(f"  上櫃 OpenAPI 日期 {row_date} 與 {roc_compact} 不符，改用日期回補。")
+
+    # 2) dailyQuotes 指定日期（結構為 tables[{fields,data}]，欄位名容錯）
+    time.sleep(2)
+    data = fetch_json_retry(TPEX_DAILY_BY_DATE.format(roc=roc_slash), f"上櫃收盤 {roc_slash}", tries=2)
+    if not isinstance(data, dict):
+        return None
+    tables = data.get("tables") or []
+    for t in tables:
+        fields = t.get("fields", [])
+
+        def idx(*names):
+            for n in names:
+                for i, f in enumerate(fields):
+                    if n in f:
+                        return i
+            return None
+
+        i_code = idx("代號")
+        i_name = idx("名稱")
+        i_close = idx("收盤")
+        i_chg = idx("漲跌")
+        i_vol = idx("成交股數", "成交量")
+        if i_code is None or i_close is None or i_vol is None:
+            continue
+        out = []
+        for row in t.get("data", []):
+            try:
+                q = norm(row[i_code], row[i_name] if i_name is not None else None,
+                         row[i_close], row[i_chg] if i_chg is not None else None, row[i_vol])
+            except Exception:
+                continue
+            if q:
+                out.append(q)
+        if out:
+            return out
+    return None
+
+
 def fetch_index(data_date):
     """抓 data_date 當日的加權指數收盤與漲跌%（FMTQIK 市場成交資訊）。
     回傳 {"name","close","change","chg_pct"} 或 None。"""
@@ -523,7 +622,23 @@ def main():
     else:
         data_date = now.strftime("%Y-%m-%d")
 
-    print(f"  有效個股：{len(quotes)} 檔")
+    print(f"  有效個股（上市）：{len(quotes)} 檔")
+
+    # 併入上櫃報價（失敗不影響上市資料）
+    time.sleep(2)  # 禮貌間隔
+    try:
+        tpex = fetch_tpex_quotes(data_date)
+    except Exception as e:
+        print(f"  ! 上櫃報價抓取異常（略過）：{e}")
+        tpex = None
+    if tpex:
+        seen = {q["code"] for q in quotes}
+        added = [q for q in tpex if q["code"] not in seen]
+        quotes = quotes + added
+        print(f"  併入上櫃：{len(added)} 檔（合計 {len(quotes)}）")
+    else:
+        print("  上櫃報價無資料，僅用上市。")
+
     sectors = aggregate_by_sector(quotes, industry_lookup)
     print(f"  彙總板塊：{len(sectors)} 個")
 
@@ -542,8 +657,8 @@ def main():
         "updated": now.strftime("%Y-%m-%d %H:%M"),
         "data_date": data_date,
         "market": "TW",
-        "source": "TWSE STOCK_DAY_ALL / MI_INDEX + t187ap03_L",
-        "note": "板塊漲跌為成交金額加權；面積為當日成交金額(億元)近似，非真實市值。",
+        "source": "TWSE STOCK_DAY_ALL / MI_INDEX / FMTQIK + TPEx dailyQuotes + t187ap03_L/O",
+        "note": "板塊漲跌為成交金額加權；面積為當日成交金額(億元)近似，非真實市值。含上市與上櫃。",
         "heatmap": sectors,
     }
     if themes is not None:
