@@ -33,6 +33,21 @@ COMPANY_LIST = "https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv"
 # 可指定日期、一次抓全部個股當日成交（用於假日回補最近交易日）
 MI_INDEX = "https://www.twse.com.tw/exchangeReport/MI_INDEX?response=json&type=ALLBUT0999&date={date}"
 
+# 證交所產業別「代碼」→ 名稱（t187ap03_L.csv 的產業別欄位給的是代碼）
+INDUSTRY_CODE2NAME = {
+    "01": "水泥工業", "02": "食品工業", "03": "塑膠工業", "04": "紡織纖維",
+    "05": "電機機械", "06": "電器電纜", "08": "玻璃陶瓷", "09": "造紙工業",
+    "10": "鋼鐵工業", "11": "橡膠工業", "12": "汽車工業", "14": "建材營造業",
+    "15": "航運業", "16": "觀光餐旅", "17": "金融保險業", "18": "貿易百貨業",
+    "19": "綜合", "20": "其他業", "21": "化學工業", "22": "生技醫療業",
+    "23": "油電燃氣業", "24": "半導體業", "25": "電腦及週邊設備業",
+    "26": "光電業", "27": "通信網路業", "28": "電子零組件業",
+    "29": "電子通路業", "30": "資訊服務業", "31": "其他電子業",
+    "32": "文化創意業", "33": "農業科技業", "34": "電子商務",
+    "35": "綠能環保", "36": "數位雲端", "37": "運動休閒", "38": "居家生活",
+    "80": "管理股票", "91": "存託憑證",
+}
+
 # 證交所產業別 → 儀表板顯示板塊（可自行調整合併）
 INDUSTRY_MAP = {
     "半導體業": "半導體",
@@ -104,6 +119,8 @@ def build_industry_lookup():
             if k and "產業別" in k:
                 ind = (v or "").strip()
         if code and ind:
+            if ind.isdigit():  # 欄位給代碼時轉成名稱
+                ind = INDUSTRY_CODE2NAME.get(ind.zfill(2), ind)
             lookup[code] = ind
     return lookup
 
@@ -303,6 +320,126 @@ def fetch_quotes_by_date(yyyymmdd):
     return parse_mi_index(data)
 
 
+MASTER_FILE = "master_tw.json"
+HISTORY_FILE = "history_tw.json"
+HISTORY_KEEP_DAYS = 45  # 保留最近 45 個交易日，足夠算月動能
+
+
+def load_master_themes():
+    """讀取主題主檔 master_tw.json；不存在或壞掉回傳空 list（不影響熱力圖）。"""
+    try:
+        with open(MASTER_FILE, encoding="utf-8") as f:
+            return json.load(f).get("themes", [])
+    except Exception as e:
+        print(f"  ! 讀取 {MASTER_FILE} 失敗：{e}", file=sys.stderr)
+        return []
+
+
+def load_history():
+    try:
+        with open(HISTORY_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def compound_chg(chgs):
+    """多日漲跌幅複利合成，回傳 %。"""
+    acc = 1.0
+    for c in chgs:
+        acc *= 1 + c / 100.0
+    return round((acc - 1) * 100, 2)
+
+
+def build_theme_payload(quotes, data_date):
+    """依 master_tw.json 主題聚合真實量價，並用 history_tw.json 累積算週/月動能。
+    回傳 (themes_out, stock_chg_out)；主檔缺失時回傳 (None, None)。"""
+    master = load_master_themes()
+    if not master:
+        return None, None
+
+    qmap = {q["code"]: q for q in quotes}
+
+    # 當日：每主題加權漲跌 + 成交金額（億元）；每檔個股漲跌
+    day_themes = {}
+    day_stocks = {}
+    themes_out = []
+    for t in master:
+        stocks_out = []
+        w_sum = 0.0
+        wchg_sum = 0.0
+        for code, name in t.get("stocks", []):
+            q = qmap.get(code)
+            if q:
+                val = round(q["close"] * q["volume"] / 1e8, 2)  # 成交金額 億元
+                chg = q["change_pct"]
+                w_sum += val
+                wchg_sum += val * chg
+                day_stocks[code] = chg
+                stocks_out.append({"code": code, "name": name, "chg": chg, "value": val})
+            else:
+                # 上櫃或當日無成交 → 無報價，前端以 0 顯示
+                stocks_out.append({"code": code, "name": name, "chg": None, "value": None})
+        chg_d = round(wchg_sum / w_sum, 2) if w_sum > 0 else 0.0
+        vol_d = round(w_sum, 1)
+        day_themes[t["id"]] = {"chg": chg_d, "vol": vol_d}
+        themes_out.append({
+            "id": t["id"],
+            "name": t["name"],
+            "group": t.get("group"),
+            "tier": t.get("tier"),
+            "supplies_to": t.get("supplies_to", []),
+            "chg": {"d": chg_d},
+            "vol": {"d": vol_d},
+            "stocks": stocks_out,
+        })
+
+    # 更新歷史（以 data_date 為 key，重跑同一天會覆蓋不會重複累積）
+    history = load_history()
+    history[data_date] = {"themes": day_themes, "stocks": day_stocks}
+    dates = sorted(history.keys(), reverse=True)[:HISTORY_KEEP_DAYS]
+    history = {d: history[d] for d in dates}
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False)
+    print(f"  歷史資料：{len(dates)} 個交易日（{dates[-1]} ~ {dates[0]}）")
+
+    # 週(5日)/月(21日)：漲跌複利合成、量加總（歷史不足就用現有天數）
+    for th in themes_out:
+        tid = th["id"]
+        w_chgs, w_vol, m_chgs, m_vol = [], 0.0, [], 0.0
+        for i, d in enumerate(dates):
+            rec = history[d]["themes"].get(tid)
+            if not rec:
+                continue
+            if i < 5:
+                w_chgs.append(rec["chg"])
+                w_vol += rec["vol"]
+            if i < 21:
+                m_chgs.append(rec["chg"])
+                m_vol += rec["vol"]
+        th["chg"]["w"] = compound_chg(w_chgs)
+        th["chg"]["m"] = compound_chg(m_chgs)
+        th["vol"]["w"] = round(w_vol, 1)
+        th["vol"]["m"] = round(m_vol, 1)
+
+    # 個股：日 + 週（供關係圖外框配色）
+    stock_chg_out = {}
+    all_codes = set()
+    for d in dates[:5]:
+        all_codes.update(history[d]["stocks"].keys())
+    for code in all_codes:
+        w_chgs = [history[d]["stocks"][code] for d in dates[:5] if code in history[d]["stocks"]]
+        entry = {}
+        if code in day_stocks:
+            entry["d"] = day_stocks[code]
+        if w_chgs:
+            entry["w"] = compound_chg(w_chgs)
+        if entry:
+            stock_chg_out[code] = entry
+
+    return themes_out, stock_chg_out
+
+
 def main():
     now = datetime.now(TZ)
     print(f"[{now.isoformat()}] 開始抓取台股資料 ...")
@@ -346,6 +483,10 @@ def main():
     sectors = aggregate_by_sector(quotes, industry_lookup)
     print(f"  彙總板塊：{len(sectors)} 個")
 
+    themes, stock_chg = build_theme_payload(quotes, data_date)
+    if themes is not None:
+        print(f"  主題聚合：{len(themes)} 個主題、{len(stock_chg)} 檔個股漲跌")
+
     payload = {
         "updated": now.strftime("%Y-%m-%d %H:%M"),
         "data_date": data_date,
@@ -354,6 +495,9 @@ def main():
         "note": "板塊漲跌為成交金額加權；面積為當日成交金額(億元)近似，非真實市值。",
         "heatmap": sectors,
     }
+    if themes is not None:
+        payload["themes"] = themes       # 資金流向極細主題（真實量價）
+        payload["stock_chg"] = stock_chg  # 個股漲跌 {code:{d,w}}，供關係圖配色
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)

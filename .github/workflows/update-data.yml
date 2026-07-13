@@ -29,15 +29,15 @@ jobs:
       - name: 抓取並產生 data.json
         run: python fetch_data.py
 
-      - name: 若 data.json 有變動則 commit
+      - name: 若資料有變動則 commit
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if [ -n "$(git status --porcelain data.json)" ]; then
-            git add data.json
+          if [ -n "$(git status --porcelain data.json history_tw.json)" ]; then
+            git add data.json history_tw.json
             git commit -m "自動更新台股資料 $(date -u +'%Y-%m-%d %H:%M UTC')"
             git push
-            echo "data.json 已更新並推送。"
+            echo "data.json / history_tw.json 已更新並推送。"
           else
-            echo "data.json 無變動，略過。"
+            echo "資料無變動，略過。"
           fi
