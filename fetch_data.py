@@ -137,9 +137,15 @@ def build_industry_lookup():
     return lookup
 
 
+# 最近一次 fetch_json_retry 的失敗型態：None=成功、"http"=連線/HTTP錯誤（多半是被限流）、
+# "nonjson"=回傳非 JSON、"empty"=回傳空白。回補腳本靠它分辨「被限流」與「休市無資料」。
+LAST_ERROR = None
+
+
 def fetch_json_retry(url, label, tries=3, wait=8):
     """抓 JSON，遇到非 JSON（證交所偶爾擋雲端 IP 回 HTML）或連線失敗時重試。
     回傳 dict 或 None。"""
+    global LAST_ERROR
     for attempt in range(1, tries + 1):
         req = urllib.request.Request(url, headers=UA)
         try:
@@ -147,17 +153,49 @@ def fetch_json_retry(url, label, tries=3, wait=8):
                 raw = r.read().decode("utf-8").strip()
         except Exception as e:
             print(f"  {label} 連線失敗（第{attempt}次）：{e}")
+            LAST_ERROR = "http"
             raw = None
         if raw:
             try:
-                return json.loads(raw)
+                data = json.loads(raw)
+                LAST_ERROR = None
+                return data
             except ValueError:
                 print(f"  {label} 回傳非 JSON（第{attempt}次），開頭：{raw[:60]!r}")
+                LAST_ERROR = "nonjson"
         elif raw == "":
             print(f"  {label} 回傳空白（第{attempt}次）。")
+            LAST_ERROR = "empty"
         if attempt < tries:
             time.sleep(wait)
     return None
+
+
+def parse_stock_day_all_csv(raw):
+    """STOCK_DAY_ALL 被限流時證交所會改回 CSV 格式（內容其實完整），直接解析。"""
+    out = []
+    for row in csv.DictReader(io.StringIO(raw)):
+        def g(*keys):
+            for k in keys:
+                for rk, v in row.items():
+                    if rk and k in rk:
+                        return v
+            return None
+        code = (g("證券代號") or "").strip()
+        if not (code.isdigit() and len(code) == 4):
+            continue
+        close = to_float(g("收盤價"))
+        vol = to_float(g("成交股數"))
+        if close is None or vol is None:
+            continue
+        change = to_float(g("漲跌價差"))
+        chg_pct = None
+        if change is not None and (close - change):
+            chg_pct = round(change / (close - change) * 100, 2)
+        out.append({"code": code, "name": (g("證券名稱") or code).strip(),
+                    "close": close, "change_pct": chg_pct if chg_pct is not None else 0.0,
+                    "volume": vol})
+    return out
 
 
 def fetch_quotes():
@@ -165,6 +203,19 @@ def fetch_quotes():
     非交易日（假日）證交所可能回空白或非 JSON，此時回傳 None 視為無資料。"""
     data = fetch_json_retry(STOCK_DAY_ALL, "個股成交")
     if data is None:
+        # 非 JSON 時可能是被降級成 CSV（資料其實在裡面），抓原文再試一次
+        if LAST_ERROR == "nonjson":
+            try:
+                req = urllib.request.Request(STOCK_DAY_ALL, headers=UA)
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    raw = r.read().decode("utf-8-sig", errors="replace").strip()
+                if raw and "證券代號" in raw.splitlines()[0]:
+                    out = parse_stock_day_all_csv(raw)
+                    if out:
+                        print(f"  個股成交改以 CSV 解析成功：{len(out)} 檔")
+                        return out
+            except Exception as e:
+                print(f"  CSV 備援解析失敗：{e}")
         return None
     if data.get("stat") != "OK" or "data" not in data:
         print(f"  個股成交 stat 非 OK：{data.get('stat')}")
@@ -652,6 +703,14 @@ def main():
 
     sectors = aggregate_by_sector(quotes, industry_lookup)
     print(f"  彙總板塊：{len(sectors)} 個")
+    if not sectors:
+        # 產業別 CSV 被限流回 HTML 時 lookup 會是空的 → 不可用空陣列覆蓋好資料
+        try:
+            with open("data.json", encoding="utf-8") as f:
+                sectors = json.load(f).get("heatmap", [])
+            print(f"  ! 彙總為空（產業別對照可能被限流），沿用上次 heatmap（{len(sectors)} 板塊）。")
+        except Exception:
+            print("  ! 彙總為空且無舊 data.json 可沿用。")
 
     themes, stock_chg = build_theme_payload(quotes, data_date)
     if themes is not None:
