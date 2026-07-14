@@ -31,8 +31,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if [ -n "$(git status --porcelain data.json history_tw.json)" ]; then
-            git add data.json history_tw.json
+          if [ -n "$(git status --porcelain data.json history_tw.json industry_tw.json prices)" ]; then
+            git add data.json history_tw.json industry_tw.json prices
             git commit -m "回補主題歷史資料 $(date -u +'%Y-%m-%d %H:%M UTC')"
             # 執行期間 main 可能被排程推進 → rebase 後重試（衝突時保留本次重算的資料檔）
             n=0
