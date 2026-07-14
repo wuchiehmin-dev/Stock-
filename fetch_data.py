@@ -736,6 +736,9 @@ def main():
         payload["stock_chg"] = stock_chg  # 個股漲跌 {code:{d,w}}，供關係圖配色
     if market_index:
         payload["index"] = market_index   # 大盤加權指數（標題列用）
+    # 全市場「股名→當日漲跌」對照：供應鏈各主題視圖的公司標籤用
+    # （涵蓋上市+上櫃全部個股，master 名單以外的公司也能顯示真實漲跌）
+    payload["name_chg"] = {q["name"]: q["change_pct"] for q in quotes}
 
     with open("data.json", "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
