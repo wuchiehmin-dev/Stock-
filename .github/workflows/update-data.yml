@@ -35,8 +35,8 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if [ -n "$(git status --porcelain data.json history_tw.json)" ]; then
-            git add data.json history_tw.json
+          if [ -n "$(git status --porcelain data.json history_tw.json industry_tw.json prices)" ]; then
+            git add data.json history_tw.json industry_tw.json prices
             git commit -m "自動更新台股資料 $(date -u +'%Y-%m-%d %H:%M UTC')"
             # 執行期間 main 可能被其他 workflow 推進 → rebase 後重試（衝突時保留本次資料）
             n=0

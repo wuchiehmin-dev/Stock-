@@ -20,6 +20,7 @@ Phase 2 · 台股熱力圖資料抓取
 import json
 import csv
 import io
+import os
 import sys
 import time
 import urllib.request
@@ -390,6 +391,51 @@ MASTER_FILE = "master_tw.json"
 HISTORY_FILE = "history_tw.json"
 HISTORY_KEEP_DAYS = 45  # 保留最近 45 個交易日，足夠算月動能
 
+# ===== 每日快照（唯一真實來源）=====
+# prices/YYYY-MM-DD.json：{"date","index":{...}|null,"stocks":{代號:{n名稱,c收盤,p漲跌%,v成交股數}}}
+# 寫入後只會被「合併補強」不會退化；data.json / history_tw.json 都是從快照重算的衍生品。
+SNAP_DIR = "prices"
+INDUSTRY_CACHE = "industry_tw.json"  # 產業別對照快取（CSV 被限流時沿用）
+
+
+def snapshot_path(date_key):
+    return os.path.join(SNAP_DIR, f"{date_key}.json")
+
+
+def load_snapshot(date_key):
+    try:
+        with open(snapshot_path(date_key), encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def save_snapshot(date_key, quotes, index=None):
+    """寫入每日快照。同日重寫採合併：新報價覆蓋同代號、舊有的保留；
+    指數新值優先、抓不到保留舊值 → 部分失敗的執行不會讓快照退化。"""
+    os.makedirs(SNAP_DIR, exist_ok=True)
+    old = load_snapshot(date_key) or {}
+    stocks = old.get("stocks", {})
+    for q in quotes:
+        stocks[q["code"]] = {"n": q["name"], "c": q["close"], "p": q["change_pct"], "v": q["volume"]}
+    snap = {"date": date_key, "index": index or old.get("index"), "stocks": stocks}
+    with open(snapshot_path(date_key), "w", encoding="utf-8") as f:
+        json.dump(snap, f, ensure_ascii=False, separators=(",", ":"))
+    return snap
+
+
+def snapshot_quotes(snap):
+    """快照 → fetch_quotes 相同結構的 list。"""
+    return [{"code": c, "name": s["n"], "close": s["c"], "change_pct": s["p"], "volume": s["v"]}
+            for c, s in snap.get("stocks", {}).items()]
+
+
+def snapshot_dates():
+    """已存在的快照日期，由舊到新。"""
+    if not os.path.isdir(SNAP_DIR):
+        return []
+    return sorted(f[:-5] for f in os.listdir(SNAP_DIR) if f.endswith(".json"))
+
 
 def load_master_themes():
     """讀取主題主檔 master_tw.json；不存在或壞掉回傳空 list（不影響熱力圖）。"""
@@ -399,6 +445,46 @@ def load_master_themes():
     except Exception as e:
         print(f"  ! 讀取 {MASTER_FILE} 失敗：{e}", file=sys.stderr)
         return []
+
+
+def build_industry_lookup_cached():
+    """產業別對照：抓成功就更新快取檔；被限流/失敗就用快取，徹底移除空 heatmap 的風險。"""
+    lookup = {}
+    try:
+        lookup = build_industry_lookup()
+    except Exception as e:
+        print(f"  ! 產業別抓取異常：{e}")
+    if len(lookup) >= 500:
+        with open(INDUSTRY_CACHE, "w", encoding="utf-8") as f:
+            json.dump(lookup, f, ensure_ascii=False, separators=(",", ":"))
+        return lookup
+    try:
+        with open(INDUSTRY_CACHE, encoding="utf-8") as f:
+            cached = json.load(f)
+        print(f"  產業別來源失敗，改用快取：{len(cached)} 檔")
+        return cached
+    except Exception:
+        print("  ! 產業別來源失敗且無快取。")
+        return lookup
+
+
+def sync_history_from_snapshots():
+    """用快照重算主題歷史：有快照的日期以快照為準覆蓋，無快照的舊日期（遷移前的
+    legacy 資料）保留，供週/月動能計算。"""
+    history = load_history()
+    for d in snapshot_dates()[-HISTORY_KEEP_DAYS:]:
+        snap = load_snapshot(d)
+        if not snap or not snap.get("stocks"):
+            continue
+        day_themes, day_stocks, _ = compute_day_record(snapshot_quotes(snap))
+        if day_themes is None:
+            break
+        history[d] = {"themes": day_themes, "stocks": day_stocks}
+    dates = sorted(history.keys(), reverse=True)[:HISTORY_KEEP_DAYS]
+    history = {d: history[d] for d in dates}
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False)
+    return history
 
 
 def load_history():
@@ -644,50 +730,114 @@ def fetch_index(data_date):
     return None
 
 
+def acquire_quotes(now):
+    """取得目標交易日的上市全市場報價。
+    盤中防呆：台北 14:00 前執行一律回補「最近一個已收盤交易日」，避免產出半套資料。
+    回傳 (quotes, data_date) 或 (None, None)。"""
+    intraday = now.hour < 14
+    if not intraday:
+        try:
+            quotes = fetch_quotes()
+        except Exception as e:
+            print(f"  ! 個股成交抓取失敗：{e}")
+            quotes = None
+        if quotes:
+            return quotes, now.strftime("%Y-%m-%d")
+        print("  當日 STOCK_DAY_ALL 無資料，改用 MI_INDEX 往回找 ...")
+    else:
+        print("  盤中執行（台北 14:00 前）：改抓最近一個已收盤交易日。")
+    start = 1 if intraday else 0
+    for back in range(start, start + 10):
+        d = now - timedelta(days=back)
+        if d.weekday() >= 5:
+            continue
+        time.sleep(2)  # 禮貌間隔
+        q = fetch_quotes_by_date(d.strftime("%Y%m%d"))
+        if q:
+            print(f"  已取得 {d.strftime('%Y%m%d')} 的資料：{len(q)} 檔")
+            return q, d.strftime("%Y-%m-%d")
+    return None, None
+
+
+def rebuild_outputs(now, industry_lookup):
+    """從快照重建衍生檔（data.json / history_tw.json）。任何欄位這次抓不到，
+    自動沿用最近可用的快照或上一份 data.json，資料只會補強不會退化。"""
+    dates = snapshot_dates()
+    if not dates:
+        print("  ! 無任何快照，跳過重建。")
+        return
+    latest = dates[-1]
+    snap = load_snapshot(latest)
+    quotes = snapshot_quotes(snap)
+
+    prev = {}
+    try:
+        with open("data.json", encoding="utf-8") as f:
+            prev = json.load(f)
+    except Exception:
+        pass
+
+    sectors = aggregate_by_sector(quotes, industry_lookup)
+    print(f"  彙總板塊：{len(sectors)} 個")
+    if not sectors:
+        sectors = prev.get("heatmap", [])
+        print(f"  ! 彙總為空，沿用上次 heatmap（{len(sectors)} 板塊）。")
+
+    sync_history_from_snapshots()
+    themes, stock_chg = build_theme_payload(quotes, latest)
+    if themes is not None:
+        print(f"  主題聚合：{len(themes)} 個主題、{len(stock_chg)} 檔個股漲跌")
+
+    # 指數 carry-forward：最新快照沒有就往前找，再沒有沿用上一份 data.json
+    market_index = None
+    for d in reversed(dates):
+        s = load_snapshot(d)
+        if s and s.get("index"):
+            market_index = s["index"]
+            if d != latest:
+                print(f"  加權指數沿用 {d} 快照。")
+            break
+    if not market_index:
+        market_index = prev.get("index")
+
+    payload = {
+        "updated": now.strftime("%Y-%m-%d %H:%M"),
+        "data_date": latest,
+        "market": "TW",
+        "source": "TWSE STOCK_DAY_ALL / MI_INDEX / FMTQIK + TPEx dailyQuotes + t187ap03_L/O",
+        "note": "板塊漲跌為成交金額加權；面積為當日成交金額(億元)近似，非真實市值。含上市與上櫃。",
+        "heatmap": sectors,
+    }
+    if themes is not None:
+        payload["themes"] = themes       # 資金流向極細主題（真實量價）
+        payload["stock_chg"] = stock_chg  # 個股漲跌 {code:{d,w}}，供關係圖配色
+    if market_index:
+        payload["index"] = market_index   # 大盤加權指數（標題列用）
+    # 全市場「股名→當日漲跌」對照：供應鏈各主題視圖的公司標籤用
+    payload["name_chg"] = {q["name"]: q["change_pct"] for q in quotes}
+
+    with open("data.json", "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    print(f"  已寫入 data.json（{len(sectors)} 板塊，資料日 {latest}）")
+
+
 def main():
     now = datetime.now(TZ)
     print(f"[{now.isoformat()}] 開始抓取台股資料 ...")
 
-    try:
-        industry_lookup = build_industry_lookup()
-        print(f"  產業別對照：{len(industry_lookup)} 檔")
-    except Exception as e:
-        print(f"  ! 產業別抓取失敗：{e}", file=sys.stderr)
-        sys.exit(1)
+    industry_lookup = build_industry_lookup_cached()
+    print(f"  產業別對照：{len(industry_lookup)} 檔")
 
     time.sleep(2)  # 禮貌間隔，避開流量限制
-
-    try:
-        quotes = fetch_quotes()
-    except Exception as e:
-        print(f"  ! 個股成交抓取失敗：{e}", file=sys.stderr)
-        sys.exit(1)
-
+    quotes, data_date = acquire_quotes(now)
     if not quotes:
-        # STOCK_DAY_ALL 失敗 → 改用 MI_INDEX 從「今天」往回找最近交易日
-        # （back=0 涵蓋交易日當天 STOCK_DAY_ALL 被擋、但 MI_INDEX 正常的情況）
-        print("  當日 STOCK_DAY_ALL 無資料，改用 MI_INDEX 從今天往回找 ...")
-        used_date = None
-        for back in range(0, 8):
-            d = (now - timedelta(days=back)).strftime("%Y%m%d")
-            time.sleep(2)  # 禮貌間隔
-            q = fetch_quotes_by_date(d)
-            if q:
-                quotes = q
-                used_date = d
-                print(f"  已取得 {d} 的資料：{len(q)} 檔")
-                break
-        if not quotes:
-            print("  近 7 日皆無資料，保留既有 data.json。")
-            sys.exit(0)
-        data_date = used_date[:4] + "-" + used_date[4:6] + "-" + used_date[6:]
-    else:
-        data_date = now.strftime("%Y-%m-%d")
-
+        print("  近期皆無上市資料，保留既有檔案，改用既有快照重建。")
+        rebuild_outputs(now, industry_lookup)
+        sys.exit(0)
     print(f"  有效個股（上市）：{len(quotes)} 檔")
 
-    # 併入上櫃報價（失敗不影響上市資料）
-    time.sleep(2)  # 禮貌間隔
+    # 併入上櫃報價（失敗不影響上市資料；快照合併會保留既有上櫃紀錄）
+    time.sleep(2)
     try:
         tpex = fetch_tpex_quotes(data_date)
     except Exception as e:
@@ -701,48 +851,17 @@ def main():
     else:
         print("  上櫃報價無資料，僅用上市。")
 
-    sectors = aggregate_by_sector(quotes, industry_lookup)
-    print(f"  彙總板塊：{len(sectors)} 個")
-    if not sectors:
-        # 產業別 CSV 被限流回 HTML 時 lookup 會是空的 → 不可用空陣列覆蓋好資料
-        try:
-            with open("data.json", encoding="utf-8") as f:
-                sectors = json.load(f).get("heatmap", [])
-            print(f"  ! 彙總為空（產業別對照可能被限流），沿用上次 heatmap（{len(sectors)} 板塊）。")
-        except Exception:
-            print("  ! 彙總為空且無舊 data.json 可沿用。")
-
-    themes, stock_chg = build_theme_payload(quotes, data_date)
-    if themes is not None:
-        print(f"  主題聚合：{len(themes)} 個主題、{len(stock_chg)} 檔個股漲跌")
-
-    time.sleep(2)  # 禮貌間隔
+    time.sleep(2)
     market_index = fetch_index(data_date)
     if market_index:
         print(f"  加權指數：{market_index['close']}（{market_index['chg_pct']}%）")
     else:
-        print("  ! 加權指數抓取失敗，前端將維持上次/樣板值。")
+        print("  ! 加權指數抓取失敗（重建時沿用最近快照）。")
 
-    payload = {
-        "updated": now.strftime("%Y-%m-%d %H:%M"),
-        "data_date": data_date,
-        "market": "TW",
-        "source": "TWSE STOCK_DAY_ALL / MI_INDEX / FMTQIK + TPEx dailyQuotes + t187ap03_L/O",
-        "note": "板塊漲跌為成交金額加權；面積為當日成交金額(億元)近似，非真實市值。含上市與上櫃。",
-        "heatmap": sectors,
-    }
-    if themes is not None:
-        payload["themes"] = themes       # 資金流向極細主題（真實量價）
-        payload["stock_chg"] = stock_chg  # 個股漲跌 {code:{d,w}}，供關係圖配色
-    if market_index:
-        payload["index"] = market_index   # 大盤加權指數（標題列用）
-    # 全市場「股名→當日漲跌」對照：供應鏈各主題視圖的公司標籤用
-    # （涵蓋上市+上櫃全部個股，master 名單以外的公司也能顯示真實漲跌）
-    payload["name_chg"] = {q["name"]: q["change_pct"] for q in quotes}
+    snap = save_snapshot(data_date, quotes, market_index)
+    print(f"  快照 {snapshot_path(data_date)}：{len(snap['stocks'])} 檔")
 
-    with open("data.json", "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
-    print(f"  已寫入 data.json（{len(sectors)} 板塊）")
+    rebuild_outputs(now, industry_lookup)
 
 
 if __name__ == "__main__":
