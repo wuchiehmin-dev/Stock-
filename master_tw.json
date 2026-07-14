@@ -774,6 +774,444 @@
           "台船"
         ]
       ]
+    },
+    {
+      "id": "semi_equip",
+      "name": "半導體設備",
+      "group": "AI算力",
+      "twse_industry": "半導體業",
+      "tier": "up",
+      "supplies_to": [
+        "foundry",
+        "cowos"
+      ],
+      "stocks": [
+        [
+          "3680",
+          "家登"
+        ],
+        [
+          "6196",
+          "帆宣"
+        ],
+        [
+          "3413",
+          "京鼎"
+        ],
+        [
+          "3131",
+          "弘塑"
+        ],
+        [
+          "6187",
+          "萬潤"
+        ],
+        [
+          "6640",
+          "均華"
+        ]
+      ]
+    },
+    {
+      "id": "semi_material",
+      "name": "半導體材料",
+      "group": "AI算力",
+      "twse_industry": null,
+      "tier": "up",
+      "supplies_to": [
+        "foundry"
+      ],
+      "stocks": [
+        [
+          "5434",
+          "崇越"
+        ],
+        [
+          "1773",
+          "勝一"
+        ],
+        [
+          "4755",
+          "三福化"
+        ],
+        [
+          "1785",
+          "光洋科"
+        ],
+        [
+          "5234",
+          "達興材料"
+        ]
+      ]
+    },
+    {
+      "id": "ai_network",
+      "name": "AI網通/交換器",
+      "group": "AI算力",
+      "twse_industry": "通信網路業",
+      "tier": "mid",
+      "supplies_to": [
+        "ai_server"
+      ],
+      "stocks": [
+        [
+          "2345",
+          "智邦"
+        ],
+        [
+          "3596",
+          "智易"
+        ],
+        [
+          "3380",
+          "明泰"
+        ],
+        [
+          "5388",
+          "中磊"
+        ]
+      ]
+    },
+    {
+      "id": "connector",
+      "name": "高速連接器/線材",
+      "group": "AI算力",
+      "twse_industry": "電子零組件業",
+      "tier": "up",
+      "supplies_to": [
+        "ai_server"
+      ],
+      "stocks": [
+        [
+          "3533",
+          "嘉澤"
+        ],
+        [
+          "6715",
+          "嘉基"
+        ],
+        [
+          "5457",
+          "宣德"
+        ],
+        [
+          "3665",
+          "貿聯-KY"
+        ]
+      ]
+    },
+    {
+      "id": "chassis",
+      "name": "機殼/滑軌",
+      "group": "AI算力",
+      "twse_industry": "電腦及週邊設備業",
+      "tier": "down",
+      "supplies_to": [
+        "ai_server"
+      ],
+      "stocks": [
+        [
+          "8210",
+          "勤誠"
+        ],
+        [
+          "2059",
+          "川湖"
+        ],
+        [
+          "3693",
+          "營邦"
+        ],
+        [
+          "3013",
+          "晟銘電"
+        ]
+      ]
+    },
+    {
+      "id": "hispeed_ic",
+      "name": "高速介面IC",
+      "group": "AI算力",
+      "twse_industry": "半導體業",
+      "tier": "up",
+      "supplies_to": [
+        "ai_server"
+      ],
+      "stocks": [
+        [
+          "5274",
+          "信驊"
+        ],
+        [
+          "4966",
+          "譜瑞-KY"
+        ],
+        [
+          "5269",
+          "祥碩"
+        ],
+        [
+          "6756",
+          "威鋒電子"
+        ]
+      ]
+    },
+    {
+      "id": "pc_brand",
+      "name": "板卡/AI PC品牌",
+      "group": "AI算力",
+      "twse_industry": "電腦及週邊設備業",
+      "tier": "down",
+      "supplies_to": [],
+      "stocks": [
+        [
+          "2357",
+          "華碩"
+        ],
+        [
+          "2376",
+          "技嘉"
+        ],
+        [
+          "2377",
+          "微星"
+        ],
+        [
+          "2353",
+          "宏碁"
+        ]
+      ]
+    },
+    {
+      "id": "epitaxy",
+      "name": "矽光子磊晶/雷射",
+      "group": "AI算力",
+      "twse_industry": "半導體業",
+      "tier": "up",
+      "supplies_to": [
+        "cpo_pkg",
+        "optical_module"
+      ],
+      "stocks": [
+        [
+          "3081",
+          "聯亞"
+        ],
+        [
+          "2455",
+          "全新"
+        ],
+        [
+          "8086",
+          "宏捷科"
+        ],
+        [
+          "3105",
+          "穩懋"
+        ]
+      ]
+    },
+    {
+      "id": "ccl_material",
+      "name": "CCL上游材料",
+      "group": "AI算力",
+      "twse_industry": null,
+      "tier": "up",
+      "supplies_to": [
+        "ccl"
+      ],
+      "stocks": [
+        [
+          "1802",
+          "台玻"
+        ],
+        [
+          "1815",
+          "富喬"
+        ],
+        [
+          "8358",
+          "金居"
+        ]
+      ]
+    },
+    {
+      "id": "sic_gan",
+      "name": "第三代半導體SiC/GaN",
+      "group": "綠能電力",
+      "twse_industry": "半導體業",
+      "tier": "mid",
+      "supplies_to": [
+        "power"
+      ],
+      "stocks": [
+        [
+          "3707",
+          "漢磊"
+        ],
+        [
+          "2342",
+          "茂矽"
+        ],
+        [
+          "3105",
+          "穩懋"
+        ]
+      ]
+    },
+    {
+      "id": "ic_channel",
+      "name": "半導體通路",
+      "group": "AI算力",
+      "twse_industry": "電子通路業",
+      "tier": "down",
+      "supplies_to": [],
+      "stocks": [
+        [
+          "3036",
+          "文曄"
+        ],
+        [
+          "3702",
+          "大聯大"
+        ],
+        [
+          "8112",
+          "至上"
+        ]
+      ]
+    },
+    {
+      "id": "epaper",
+      "name": "電子紙",
+      "group": "其他",
+      "twse_industry": "光電業",
+      "tier": "mid",
+      "supplies_to": [],
+      "stocks": [
+        [
+          "8069",
+          "元太"
+        ],
+        [
+          "6143",
+          "振曜"
+        ]
+      ]
+    },
+    {
+      "id": "apple_optics",
+      "name": "蘋概/手機光學",
+      "group": "其他",
+      "twse_industry": "光電業",
+      "tier": "mid",
+      "supplies_to": [],
+      "stocks": [
+        [
+          "3008",
+          "大立光"
+        ],
+        [
+          "3406",
+          "玉晶光"
+        ],
+        [
+          "2474",
+          "可成"
+        ],
+        [
+          "6456",
+          "GIS-KY"
+        ]
+      ]
+    },
+    {
+      "id": "auto_electronics",
+      "name": "車用電子",
+      "group": "新題材",
+      "twse_industry": "電子零組件業",
+      "tier": "down",
+      "supplies_to": [],
+      "stocks": [
+        [
+          "8255",
+          "朋程"
+        ],
+        [
+          "6279",
+          "胡連"
+        ],
+        [
+          "2231",
+          "為升"
+        ],
+        [
+          "3552",
+          "同致"
+        ]
+      ]
+    },
+    {
+      "id": "cybersec",
+      "name": "資安/系統整合",
+      "group": "其他",
+      "twse_industry": "資訊服務業",
+      "tier": "down",
+      "supplies_to": [],
+      "stocks": [
+        [
+          "6214",
+          "精誠"
+        ],
+        [
+          "2480",
+          "敦陽科"
+        ],
+        [
+          "6690",
+          "安碁資訊"
+        ],
+        [
+          "3029",
+          "零壹"
+        ]
+      ]
+    },
+    {
+      "id": "ipc_edge",
+      "name": "工業電腦/邊緣AI",
+      "group": "AI算力",
+      "twse_industry": "電腦及週邊設備業",
+      "tier": "down",
+      "supplies_to": [
+        "robot"
+      ],
+      "stocks": [
+        [
+          "2395",
+          "研華"
+        ],
+        [
+          "6414",
+          "樺漢"
+        ],
+        [
+          "6166",
+          "凌華"
+        ],
+        [
+          "6245",
+          "立端"
+        ],
+        [
+          "8050",
+          "廣積"
+        ],
+        [
+          "3088",
+          "艾訊"
+        ]
+      ]
     }
   ]
 }
