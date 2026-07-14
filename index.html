@@ -69,6 +69,16 @@
   .flow-row .fv{font-size:12px;font-family:var(--mono);text-align:right;}
   .flow-foot{display:flex;justify-content:space-between;font-size:11px;color:var(--ink3);
     font-family:var(--mono);margin-top:10px;}
+  .mf-group{display:flex;align-items:center;gap:8px;padding:8px 4px 5px;margin-top:5px;
+    border-top:1px solid var(--line);cursor:pointer;font-size:12px;user-select:none;}
+  .mf-group:first-child{border-top:none;margin-top:0;}
+  .mf-group .gcar{color:var(--ink3);font-size:10px;width:9px;display:inline-block;transition:transform .15s;}
+  .mf-group.collapsed .gcar{transform:rotate(-90deg);}
+  .mf-group .gname{font-weight:600;color:var(--ink);}
+  .mf-group .gcnt{color:var(--ink3);font-size:11px;}
+  .mf-group .gchg{margin-left:auto;font-family:var(--mono);font-size:12px;}
+  .mf-group .gvol{color:var(--ink3);font-size:11px;font-family:var(--mono);min-width:56px;text-align:right;}
+  .mf-sub{color:var(--ink3);font-size:10px;margin-right:5px;}
   .day-tabs{display:flex;gap:4px;}
   .day-tabs button{padding:4px 11px;border-radius:5px;border:1px solid var(--line);
     background:transparent;color:var(--ink2);font-size:12px;cursor:pointer;font-family:inherit;transition:all .12s ease;}
@@ -164,9 +174,12 @@
   <div class="block">
     <div class="mf-head">
       <span class="section-label" style="margin:0;">板塊資金流向 · 極細產業主題 · 量價動能 = 成交量 × 漲跌幅</span>
-      <div class="day-tabs" id="mfPerTabs"></div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <div class="day-tabs" id="mfDimTabs"></div>
+        <div class="day-tabs" id="mfPerTabs"></div>
+      </div>
     </div>
-    <div class="flow-note">代理指標，非實際買賣超金額 · 動能長條為排序依據 · 依漲跌幅排序 · 量單位億元</div>
+    <div class="flow-note" id="mfNote">代理指標，非實際買賣超金額 · 動能長條為排序依據 · 依漲跌幅排序 · 量單位億元</div>
     <div class="mf-hdr" id="mfHdr"></div>
     <div id="flowlist"></div>
   </div>
@@ -228,7 +241,7 @@
 
 <script>
 (function(){
-  var MASTER_TW=[{"id":"cpo_pkg","name":"矽光子CPO封裝","group":"AI算力","ind":"光電業","tier":"mid","to":["ai_server"],"s":[["3363","上詮"],["4977","眾達-KY"],["3450","聯鈞"],["6869","雷傑"]]},{"id":"optical_module","name":"800G/1.6T光模組","group":"AI算力","ind":"光電業","tier":"mid","to":["ai_server"],"s":[["3234","光環"],["4979","華星光"],["3163","波若威"]]},{"id":"cowos","name":"CoWoS先進封裝","group":"AI算力","ind":"半導體業","tier":"mid","to":["ai_server"],"s":[["2330","台積電"],["3711","日月光投控"],["2449","京元電"],["6510","精測"],["3583","辛耘"]]},{"id":"memory","name":"記憶體相關","group":"AI算力","ind":"半導體業","tier":"mid","to":["ai_server"],"s":[["2408","南亞科"],["2344","華邦電"],["3260","威剛"],["8299","群聯"],["4967","十銓"],["2337","旺宏"]]},{"id":"asic","name":"ASIC設計服務","group":"AI算力","ind":"半導體業","tier":"up","to":["foundry"],"s":[["3661","世芯-KY"],["3529","力旺"],["6533","晶心科"],["3443","創意"]]},{"id":"foundry","name":"晶圓代工","group":"AI算力","ind":"半導體業","tier":"mid","to":["cowos","ai_server"],"s":[["2330","台積電"],["2303","聯電"],["5347","世界"],["6770","力積電"]]},{"id":"wafer","name":"矽晶圓","group":"AI算力","ind":"半導體業","tier":"up","to":["foundry"],"s":[["6488","環球晶"],["5483","中美晶"],["3016","嘉晶"]]},{"id":"abf","name":"ABF載板","group":"AI算力","ind":"其他電子業","tier":"up","to":["foundry"],"s":[["3037","欣興"],["8046","南電"],["3189","景碩"]]},{"id":"pcb","name":"PCB/伺服器板","group":"AI算力","ind":"其他電子業","tier":"up","to":["ai_server"],"s":[["3037","欣興"],["2368","金像電"],["6274","台燿"],["5469","瀚宇博"],["3044","健鼎"]]},{"id":"ccl","name":"CCL銅箔基板","group":"AI算力","ind":"電子零組件業","tier":"up","to":["abf","pcb"],"s":[["2383","台光電"],["6213","聯茂"]]},{"id":"cooling","name":"液冷散熱","group":"AI算力","ind":"電子零組件業","tier":"down","to":["ai_server"],"s":[["3017","奇鋐"],["3324","雙鴻"],["6230","尼得科超眾"],["3653","健策"],["6805","富世達"],["8996","高力"]]},{"id":"power","name":"HVDC/48V電源","group":"AI算力","ind":"電子零組件業","tier":"down","to":["ai_server"],"s":[["2308","台達電"],["2301","光寶科"],["6409","旭隼"]]},{"id":"ai_server","name":"AI伺服器組裝","group":"AI算力","ind":"電腦及週邊設備業","tier":"down","to":[],"s":[["2317","鴻海"],["2382","廣達"],["6669","緯穎"],["3231","緯創"],["2356","英業達"]]},{"id":"ic_design","name":"IC設計","group":"AI算力","ind":"半導體業","tier":"up","to":["foundry"],"s":[["2454","聯發科"],["3034","聯詠"],["2379","瑞昱"],["6415","矽力-KY"]]},{"id":"passive","name":"被動元件","group":"AI算力","ind":"電子零組件業","tier":"up","to":["ai_server"],"s":[["2327","國巨"],["2492","華新科"]]},{"id":"heavy_electric","name":"重電","group":"綠能電力","ind":"電機機械","tier":"up","to":["ai_server"],"s":[["1519","華城"],["1513","中興電"],["1503","士電"],["1514","亞力"],["1504","東元"],["2371","大同"]]},{"id":"cable","name":"電線電纜","group":"綠能電力","ind":"電器電纜","tier":"up","to":["heavy_electric"],"s":[["1615","大山"],["1609","大亞"],["1605","華新"]]},{"id":"robot","name":"機器人/自動化","group":"新題材","ind":"電機機械","tier":"mid","to":[],"s":[["2049","上銀"],["1597","直得"],["1536","和大"],["4576","大銀微"],["2359","所羅門"],["4585","達明"],["1590","亞德客-KY"]]},{"id":"satellite","name":"低軌衛星","group":"新題材","ind":"通信網路業","tier":"mid","to":[],"s":[["3491","昇達科"],["6285","啟碁"],["2314","台揚"],["4906","正文"],["3501","維熹"]]},{"id":"panel","name":"面板","group":"其他","ind":"光電業","tier":"mid","to":[],"s":[["2409","友達"],["3481","群創"]]},{"id":"shipping","name":"航運","group":"傳產金融","ind":"航運業","tier":"down","to":[],"s":[["2603","長榮"],["2609","陽明"],["2615","萬海"]]},{"id":"finance","name":"金融","group":"傳產金融","ind":"金融保險業","tier":"down","to":[],"s":[["2881","富邦金"],["2882","國泰金"],["2891","中信金"],["2886","兆豐金"]]},{"id":"steel","name":"鋼鐵","group":"傳產金融","ind":"鋼鐵工業","tier":"up","to":[],"s":[["2002","中鋼"],["2027","大成鋼"]]},{"id":"ip","name":"矽智財IP","group":"AI算力","ind":"半導體業","tier":"up","to":["asic","foundry"],"s":[["3529","力旺"],["6533","晶心科"],["3661","世芯-KY"],["6643","M31"]]},{"id":"ess","name":"儲能","group":"綠能電力","ind":"電機機械","tier":"mid","to":[],"s":[["6412","群電"],["6125","廣運"],["6282","康舒"],["1519","華城"],["3708","上緯投控"]]},{"id":"biotech","name":"生技醫療","group":"其他","ind":"生技醫療業","tier":"mid","to":[],"s":[["6446","藥華藥"],["4137","麗豐-KY"],["1795","美時"],["6472","保瑞"],["4746","台耀"]]},{"id":"uav","name":"軍工-無人機","group":"新題材","ind":"其他業","tier":"mid","to":[],"s":[["2634","漢翔"],["8033","雷虎"],["2630","亞航"],["2645","長榮航太"],["5371","中光電"]]},{"id":"shipbuilding","name":"軍工-造船","group":"新題材","ind":"航運業","tier":"mid","to":[],"s":[["6753","龍德造船"],["2208","台船"]]},{"id":"semi_equip","name":"半導體設備","group":"AI算力","ind":"半導體業","tier":"up","to":["foundry","cowos"],"s":[["3680","家登"],["6196","帆宣"],["3413","京鼎"],["3131","弘塑"],["6187","萬潤"],["6640","均華"]]},{"id":"semi_material","name":"半導體材料","group":"AI算力","ind":null,"tier":"up","to":["foundry"],"s":[["5434","崇越"],["1773","勝一"],["4755","三福化"],["1785","光洋科"],["5234","達興材料"]]},{"id":"ai_network","name":"AI網通/交換器","group":"AI算力","ind":"通信網路業","tier":"mid","to":["ai_server"],"s":[["2345","智邦"],["3596","智易"],["3380","明泰"],["5388","中磊"]]},{"id":"connector","name":"高速連接器/線材","group":"AI算力","ind":"電子零組件業","tier":"up","to":["ai_server"],"s":[["3533","嘉澤"],["6715","嘉基"],["5457","宣德"],["3665","貿聯-KY"]]},{"id":"chassis","name":"機殼/滑軌","group":"AI算力","ind":"電腦及週邊設備業","tier":"down","to":["ai_server"],"s":[["8210","勤誠"],["2059","川湖"],["3693","營邦"],["3013","晟銘電"]]},{"id":"hispeed_ic","name":"高速介面IC","group":"AI算力","ind":"半導體業","tier":"up","to":["ai_server"],"s":[["5274","信驊"],["4966","譜瑞-KY"],["5269","祥碩"],["6756","威鋒電子"]]},{"id":"pc_brand","name":"板卡/AI PC品牌","group":"AI算力","ind":"電腦及週邊設備業","tier":"down","to":[],"s":[["2357","華碩"],["2376","技嘉"],["2377","微星"],["2353","宏碁"]]},{"id":"epitaxy","name":"矽光子磊晶/雷射","group":"AI算力","ind":"半導體業","tier":"up","to":["cpo_pkg","optical_module"],"s":[["3081","聯亞"],["2455","全新"],["8086","宏捷科"],["3105","穩懋"]]},{"id":"ccl_material","name":"CCL上游材料","group":"AI算力","ind":null,"tier":"up","to":["ccl"],"s":[["1802","台玻"],["1815","富喬"],["8358","金居"]]},{"id":"sic_gan","name":"第三代半導體SiC/GaN","group":"綠能電力","ind":"半導體業","tier":"mid","to":["power"],"s":[["3707","漢磊"],["2342","茂矽"],["3105","穩懋"]]},{"id":"ic_channel","name":"半導體通路","group":"AI算力","ind":"電子通路業","tier":"down","to":[],"s":[["3036","文曄"],["3702","大聯大"],["8112","至上"]]},{"id":"epaper","name":"電子紙","group":"其他","ind":"光電業","tier":"mid","to":[],"s":[["8069","元太"],["6143","振曜"]]},{"id":"apple_optics","name":"蘋概/手機光學","group":"其他","ind":"光電業","tier":"mid","to":[],"s":[["3008","大立光"],["3406","玉晶光"],["2474","可成"],["6456","GIS-KY"]]},{"id":"auto_electronics","name":"車用電子","group":"新題材","ind":"電子零組件業","tier":"down","to":[],"s":[["8255","朋程"],["6279","胡連"],["2231","為升"],["3552","同致"]]},{"id":"cybersec","name":"資安/系統整合","group":"其他","ind":"資訊服務業","tier":"down","to":[],"s":[["6214","精誠"],["2480","敦陽科"],["6690","安碁資訊"],["3029","零壹"]]},{"id":"ipc_edge","name":"工業電腦/邊緣AI","group":"AI算力","ind":"電腦及週邊設備業","tier":"down","to":["robot"],"s":[["2395","研華"],["6414","樺漢"],["6166","凌華"],["6245","立端"],["8050","廣積"],["3088","艾訊"]]}];
+  var MASTER_TW=[{"id":"cpo_pkg","name":"矽光子CPO封裝","group":"AI算力","ind":"光電業","tier":"mid","to":["ai_server"],"s":[["3363","上詮"],["4977","眾達-KY"],["3450","聯鈞"],["6869","雷傑"]],"ind2":["光通訊","矽光子CPO"],"th":["半導體/CPO"]},{"id":"optical_module","name":"800G/1.6T光模組","group":"AI算力","ind":"光電業","tier":"mid","to":["ai_server"],"s":[["3234","光環"],["4979","華星光"],["3163","波若威"]],"ind2":["光通訊","光模組"],"th":["通訊/800G","通訊/1.6T"]},{"id":"cowos","name":"CoWoS先進封裝","group":"AI算力","ind":"半導體業","tier":"mid","to":["ai_server"],"s":[["2330","台積電"],["3711","日月光投控"],["2449","京元電"],["6510","精測"],["3583","辛耘"]],"ind2":["半導體","封裝測試"],"th":["AI","半導體/CoWoS"]},{"id":"memory","name":"記憶體相關","group":"AI算力","ind":"半導體業","tier":"mid","to":["ai_server"],"s":[["2408","南亞科"],["2344","華邦電"],["3260","威剛"],["8299","群聯"],["4967","十銓"],["2337","旺宏"]],"ind2":["半導體","晶圓製造"],"th":["半導體/HBM"]},{"id":"asic","name":"ASIC設計服務","group":"AI算力","ind":"半導體業","tier":"up","to":["foundry"],"s":[["3661","世芯-KY"],["3529","力旺"],["6533","晶心科"],["3443","創意"]],"ind2":["半導體","IC設計"],"th":["AI","半導體/ASIC"]},{"id":"foundry","name":"晶圓代工","group":"AI算力","ind":"半導體業","tier":"mid","to":["cowos","ai_server"],"s":[["2330","台積電"],["2303","聯電"],["5347","世界"],["6770","力積電"]],"ind2":["半導體","晶圓製造"],"th":["AI"]},{"id":"wafer","name":"矽晶圓","group":"AI算力","ind":"半導體業","tier":"up","to":["foundry"],"s":[["6488","環球晶"],["5483","中美晶"],["3016","嘉晶"]],"ind2":["半導體","上游材料"],"th":[]},{"id":"abf","name":"ABF載板","group":"AI算力","ind":"其他電子業","tier":"up","to":["foundry"],"s":[["3037","欣興"],["8046","南電"],["3189","景碩"]],"ind2":["AI伺服器供應鏈","PCB"],"th":["AI"]},{"id":"pcb","name":"PCB/伺服器板","group":"AI算力","ind":"其他電子業","tier":"up","to":["ai_server"],"s":[["3037","欣興"],["2368","金像電"],["6274","台燿"],["5469","瀚宇博"],["3044","健鼎"]],"ind2":["AI伺服器供應鏈","PCB"],"th":["AI"]},{"id":"ccl","name":"CCL銅箔基板","group":"AI算力","ind":"電子零組件業","tier":"up","to":["abf","pcb"],"s":[["2383","台光電"],["6213","聯茂"]],"ind2":["AI伺服器供應鏈","CCL"],"th":["AI"]},{"id":"cooling","name":"液冷散熱","group":"AI算力","ind":"電子零組件業","tier":"down","to":["ai_server"],"s":[["3017","奇鋐"],["3324","雙鴻"],["6230","尼得科超眾"],["3653","健策"],["6805","富世達"],["8996","高力"]],"ind2":["AI伺服器供應鏈","散熱"],"th":["AI"]},{"id":"power","name":"HVDC/48V電源","group":"AI算力","ind":"電子零組件業","tier":"down","to":["ai_server"],"s":[["2308","台達電"],["2301","光寶科"],["6409","旭隼"]],"ind2":["AI伺服器供應鏈","電源"],"th":["AI"]},{"id":"ai_server","name":"AI伺服器組裝","group":"AI算力","ind":"電腦及週邊設備業","tier":"down","to":[],"s":[["2317","鴻海"],["2382","廣達"],["6669","緯穎"],["3231","緯創"],["2356","英業達"]],"ind2":["AI伺服器供應鏈","伺服器"],"th":["AI","AI/AI Server"]},{"id":"ic_design","name":"IC設計","group":"AI算力","ind":"半導體業","tier":"up","to":["foundry"],"s":[["2454","聯發科"],["3034","聯詠"],["2379","瑞昱"],["6415","矽力-KY"]],"ind2":["半導體","IC設計"],"th":[]},{"id":"passive","name":"被動元件","group":"AI算力","ind":"電子零組件業","tier":"up","to":["ai_server"],"s":[["2327","國巨"],["2492","華新科"]],"ind2":["電子零組件","被動元件"],"th":[]},{"id":"heavy_electric","name":"重電","group":"綠能電力","ind":"電機機械","tier":"up","to":["ai_server"],"s":[["1519","華城"],["1513","中興電"],["1503","士電"],["1514","亞力"],["1504","東元"],["2371","大同"]],"ind2":["電力能源","重電"],"th":["綠能/電網"]},{"id":"cable","name":"電線電纜","group":"綠能電力","ind":"電器電纜","tier":"up","to":["heavy_electric"],"s":[["1615","大山"],["1609","大亞"],["1605","華新"]],"ind2":["電力能源","電線電纜"],"th":["綠能/電網"]},{"id":"robot","name":"機器人/自動化","group":"新題材","ind":"電機機械","tier":"mid","to":[],"s":[["2049","上銀"],["1597","直得"],["1536","和大"],["4576","大銀微"],["2359","所羅門"],["4585","達明"],["1590","亞德客-KY"]],"ind2":["機器人","工業機器人"],"th":["機器人/工業機器人"]},{"id":"satellite","name":"低軌衛星","group":"新題材","ind":"通信網路業","tier":"mid","to":[],"s":[["3491","昇達科"],["6285","啟碁"],["2314","台揚"],["4906","正文"],["3501","維熹"]],"ind2":["通訊","低軌衛星"],"th":["通訊/低軌衛星"]},{"id":"panel","name":"面板","group":"其他","ind":"光電業","tier":"mid","to":[],"s":[["2409","友達"],["3481","群創"]],"ind2":["光電","面板"],"th":[]},{"id":"shipping","name":"航運","group":"傳產金融","ind":"航運業","tier":"down","to":[],"s":[["2603","長榮"],["2609","陽明"],["2615","萬海"]],"ind2":["傳產","運輸"],"th":[]},{"id":"finance","name":"金融","group":"傳產金融","ind":"金融保險業","tier":"down","to":[],"s":[["2881","富邦金"],["2882","國泰金"],["2891","中信金"],["2886","兆豐金"]],"ind2":["金融","金控"],"th":[]},{"id":"steel","name":"鋼鐵","group":"傳產金融","ind":"鋼鐵工業","tier":"up","to":[],"s":[["2002","中鋼"],["2027","大成鋼"]],"ind2":["傳產","原物料"],"th":[]},{"id":"ip","name":"矽智財IP","group":"AI算力","ind":"半導體業","tier":"up","to":["asic","foundry"],"s":[["3529","力旺"],["6533","晶心科"],["3661","世芯-KY"],["6643","M31"]],"ind2":["半導體","IC設計"],"th":["半導體/ASIC"]},{"id":"ess","name":"儲能","group":"綠能電力","ind":"電機機械","tier":"mid","to":[],"s":[["6412","群電"],["6125","廣運"],["6282","康舒"],["1519","華城"],["3708","上緯投控"]],"ind2":["電力能源","儲能"],"th":["綠能/儲能"]},{"id":"biotech","name":"生技醫療","group":"其他","ind":"生技醫療業","tier":"mid","to":[],"s":[["6446","藥華藥"],["4137","麗豐-KY"],["1795","美時"],["6472","保瑞"],["4746","台耀"]],"ind2":["生技醫療","生技醫療"],"th":[]},{"id":"uav","name":"軍工-無人機","group":"新題材","ind":"其他業","tier":"mid","to":[],"s":[["2634","漢翔"],["8033","雷虎"],["2630","亞航"],["2645","長榮航太"],["5371","中光電"]],"ind2":["航太軍工","無人機"],"th":["國防/無人機"]},{"id":"shipbuilding","name":"軍工-造船","group":"新題材","ind":"航運業","tier":"mid","to":[],"s":[["6753","龍德造船"],["2208","台船"]],"ind2":["航太軍工","造船"],"th":["國防/造船"]},{"id":"semi_equip","name":"半導體設備","group":"AI算力","ind":"半導體業","tier":"up","to":["foundry","cowos"],"s":[["3680","家登"],["6196","帆宣"],["3413","京鼎"],["3131","弘塑"],["6187","萬潤"],["6640","均華"]],"ind2":["半導體","設備"],"th":["AI"]},{"id":"semi_material","name":"半導體材料","group":"AI算力","ind":null,"tier":"up","to":["foundry"],"s":[["5434","崇越"],["1773","勝一"],["4755","三福化"],["1785","光洋科"],["5234","達興材料"]],"ind2":["半導體","上游材料"],"th":[]},{"id":"ai_network","name":"AI網通/交換器","group":"AI算力","ind":"通信網路業","tier":"mid","to":["ai_server"],"s":[["2345","智邦"],["3596","智易"],["3380","明泰"],["5388","中磊"]],"ind2":["網通","AI交換器"],"th":["AI","通訊/800G"]},{"id":"connector","name":"高速連接器/線材","group":"AI算力","ind":"電子零組件業","tier":"up","to":["ai_server"],"s":[["3533","嘉澤"],["6715","嘉基"],["5457","宣德"],["3665","貿聯-KY"]],"ind2":["AI伺服器供應鏈","高速傳輸"],"th":["AI"]},{"id":"chassis","name":"機殼/滑軌","group":"AI算力","ind":"電腦及週邊設備業","tier":"down","to":["ai_server"],"s":[["8210","勤誠"],["2059","川湖"],["3693","營邦"],["3013","晟銘電"]],"ind2":["AI伺服器供應鏈","機構件"],"th":["AI"]},{"id":"hispeed_ic","name":"高速介面IC","group":"AI算力","ind":"半導體業","tier":"up","to":["ai_server"],"s":[["5274","信驊"],["4966","譜瑞-KY"],["5269","祥碩"],["6756","威鋒電子"]],"ind2":["半導體","IC設計"],"th":["AI","半導體/CXL"]},{"id":"pc_brand","name":"板卡/AI PC品牌","group":"AI算力","ind":"電腦及週邊設備業","tier":"down","to":[],"s":[["2357","華碩"],["2376","技嘉"],["2377","微星"],["2353","宏碁"]],"ind2":["消費電子","AI PC"],"th":["AI","AI/AI PC"]},{"id":"epitaxy","name":"矽光子磊晶/雷射","group":"AI算力","ind":"半導體業","tier":"up","to":["cpo_pkg","optical_module"],"s":[["3081","聯亞"],["2455","全新"],["8086","宏捷科"],["3105","穩懋"]],"ind2":["光通訊","磊晶/雷射"],"th":["半導體/CPO"]},{"id":"ccl_material","name":"CCL上游材料","group":"AI算力","ind":null,"tier":"up","to":["ccl"],"s":[["1802","台玻"],["1815","富喬"],["8358","金居"]],"ind2":["AI伺服器供應鏈","CCL"],"th":["AI"]},{"id":"sic_gan","name":"第三代半導體SiC/GaN","group":"綠能電力","ind":"半導體業","tier":"mid","to":["power"],"s":[["3707","漢磊"],["2342","茂矽"],["3105","穩懋"]],"ind2":["第三代半導體","SiC/GaN"],"th":["電動車/SiC","電動車/GaN"]},{"id":"ic_channel","name":"半導體通路","group":"AI算力","ind":"電子通路業","tier":"down","to":[],"s":[["3036","文曄"],["3702","大聯大"],["8112","至上"]],"ind2":["其他","半導體通路"],"th":[]},{"id":"epaper","name":"電子紙","group":"其他","ind":"光電業","tier":"mid","to":[],"s":[["8069","元太"],["6143","振曜"]],"ind2":["光電","電子紙"],"th":[]},{"id":"apple_optics","name":"蘋概/手機光學","group":"其他","ind":"光電業","tier":"mid","to":[],"s":[["3008","大立光"],["3406","玉晶光"],["2474","可成"],["6456","GIS-KY"]],"ind2":["消費電子","光學"],"th":["消費電子/Apple","消費電子/手機"]},{"id":"auto_electronics","name":"車用電子","group":"新題材","ind":"電子零組件業","tier":"down","to":[],"s":[["8255","朋程"],["6279","胡連"],["2231","為升"],["3552","同致"]],"ind2":["車用電子","車用電子"],"th":["電動車/車用電子"]},{"id":"cybersec","name":"資安/系統整合","group":"其他","ind":"資訊服務業","tier":"down","to":[],"s":[["6214","精誠"],["2480","敦陽科"],["6690","安碁資訊"],["3029","零壹"]],"ind2":["其他","資安/系統整合"],"th":[]},{"id":"ipc_edge","name":"工業電腦/邊緣AI","group":"AI算力","ind":"電腦及週邊設備業","tier":"down","to":["robot"],"s":[["2395","研華"],["6414","樺漢"],["6166","凌華"],["6245","立端"],["8050","廣積"],["3088","艾訊"]],"ind2":["工業電腦","IPC/邊緣AI"],"th":["AI","AI/邊緣AI"]}];
 
   // ====== 台股主檔轉換器（主檔→三區塊格式）======
   // 漲跌：優先用 data.json 的真實漲跌（LIVE_CHG），無資料時退回代號雜湊的樣板值
@@ -480,34 +493,86 @@
   }
 
   function fmtVol(v){return v>=10000?(v/10000).toFixed(1)+"兆":v.toLocaleString();}
+  // 主題名 → 雙維標籤（產業[大,次] 與 題材[...]），供分組用；來源為 MASTER_TW（含樣板/真實皆可）
+  var FLOW_META={};
+  MASTER_TW.forEach(function(t){FLOW_META[t.name]={ind:t.ind2||[],th:t.th||[]};});
+  function flowMeta(name){return FLOW_META[name]||{ind:[],th:[]};}
+  var curMfDim="mom";               // mom=動能排序、ind=依產業、theme=依題材
+  var mfCollapsed={};               // 分組折疊狀態，key = dim+"|"+groupLabel
+
+  function mfRowEl(r,rank,up,down,momMax,volMax,sub){
+    var pos=r.chg>=0,c=pos?up:down;
+    var mpos=r.mom>=0,mc=mpos?up:down,mpct=Math.abs(r.mom)/momMax*100;
+    var row=document.createElement("div");row.className="mf-row";row.dataset.tname=r.n;
+    var nameHtml=(sub?"<span class='mf-sub'>"+sub+"</span>":"")+r.n;
+    row.innerHTML="<span class='mf-rank'>"+(rank||"")+"</span>"+
+      "<span class='mf-name'>"+nameHtml+"</span>"+
+      "<div class='mf-mom' style='justify-content:"+(mpos?"flex-start":"flex-end")+";'><i style='width:"+mpct+"%;background:"+mc+";'></i><span class='mf-momval'>"+(mpos?"+":"")+r.mom+"</span></div>"+
+      "<div class='mf-chg' style='color:"+c+";'>"+(pos?"+":"")+r.chg.toFixed(1)+"%</div>"+
+      "<div class='mf-vol'><i style='width:"+Math.max(4,r.vol/volMax*100)+"%;'></i><span>"+fmtVol(r.vol)+"</span></div>";
+    if(cur==="TW"){
+      row.style.cursor="pointer";
+      row.title="點擊查看此主題在供應鏈上中下游的位置";
+      row.onclick=function(){if(window.highlightChainTheme)window.highlightChainTheme(r.n);};
+    }
+    return row;
+  }
+
   function renderFlow(m){
     var up=m.up,down=m.down;
     var mf=cur==="TW"?window.masterToFlow():(MFLOW[cur]?MFLOW[cur].themes:[]);
-    var hdr=document.getElementById("mfHdr");
-    hdr.innerHTML="<span>#</span><span>產業主題</span><span>量價動能</span><span class='r'>漲跌幅</span><span class='r'>成交量</span>";
-    var rows=mf.map(function(t){return {n:t.n,chg:t[curMfPer],vol:t.vol[curMfPer],mom:+((t.vol[curMfPer]/100)*t[curMfPer]).toFixed(1)};})
-      .sort(function(a,b){return b.chg-a.chg;});
+    document.getElementById("mfHdr").innerHTML=
+      "<span>#</span><span>產業主題</span><span>量價動能</span><span class='r'>漲跌幅</span><span class='r'>成交量</span>";
+    var rows=mf.map(function(t){return {n:t.n,chg:t[curMfPer],vol:t.vol[curMfPer],
+      mom:+((t.vol[curMfPer]/100)*t[curMfPer]).toFixed(1)};});
     var momMax=Math.max.apply(null,rows.map(function(r){return Math.abs(r.mom);}))||1;
     var volMax=Math.max.apply(null,rows.map(function(r){return r.vol;}))||1;
     var fbox=document.getElementById("flowlist");fbox.innerHTML="";
-    rows.forEach(function(r,i){
-      var pos=r.chg>=0,c=pos?up:down;
-      var mpos=r.mom>=0,mc=mpos?up:down,mpct=Math.abs(r.mom)/momMax*100;
-      var row=document.createElement("div");row.className="mf-row";
-      row.dataset.tname=r.n;
-      row.innerHTML="<span class='mf-rank'>"+(i+1)+"</span>"+
-        "<span class='mf-name'>"+r.n+"</span>"+
-        "<div class='mf-mom' style='justify-content:"+(mpos?"flex-start":"flex-end")+";'><i style='width:"+mpct+"%;background:"+mc+";'></i><span class='mf-momval'>"+(mpos?"+":"")+r.mom+"</span></div>"+
-        "<div class='mf-chg' style='color:"+c+";'>"+(pos?"+":"")+r.chg.toFixed(1)+"%</div>"+
-        "<div class='mf-vol'><i style='width:"+Math.max(4,r.vol/volMax*100)+"%;'></i><span>"+fmtVol(r.vol)+"</span></div>";
-      if(cur==="TW"){
-        // 點主題列 → 跳到供應鏈上中下游對應節點
-        row.style.cursor="pointer";
-        row.title="點擊查看此主題在供應鏈上中下游的位置";
-        row.onclick=function(){if(window.highlightChainTheme)window.highlightChainTheme(r.n);};
-      }
-      fbox.appendChild(row);
-    });
+
+    // 維度切換只在台股主檔（有 FLOW_META）啟用；其他市場一律動能排序
+    var dim=(cur==="TW")?curMfDim:"mom";
+    var note=document.getElementById("mfNote");
+    if(dim==="mom"){
+      rows.sort(function(a,b){return b.chg-a.chg;});
+      rows.forEach(function(r,i){fbox.appendChild(mfRowEl(r,i+1,up,down,momMax,volMax));});
+      if(note)note.textContent="代理指標，非實際買賣超金額 · 動能長條為排序依據 · 依漲跌幅排序 · 量單位億元";
+    }else{
+      // 依產業(大產業→次產業) 或 依題材(大題材) 分組
+      var groups={},order=[];
+      rows.forEach(function(r){
+        var meta=flowMeta(r.n);
+        var keys;   // [{grp,sub}]，題材可多屬 → 一列進多組
+        if(dim==="ind"){var g=meta.ind[0]||"其他";keys=[{grp:g,sub:meta.ind[1]||""}];}
+        else{keys=(meta.th.length?meta.th:["未分類"]).map(function(t){var p=t.split("/");return {grp:p[0],sub:p[1]||""};});}
+        keys.forEach(function(k){
+          if(!groups[k.grp]){groups[k.grp]={rows:[],vs:0,vc:0};order.push(k.grp);}
+          var gg=groups[k.grp];gg.rows.push({r:r,sub:k.sub});gg.vs+=r.vol;gg.vc+=r.vol*r.chg;
+        });
+      });
+      // 分組依加權漲跌由高到低；組內個股同樣依漲跌排序
+      order.sort(function(a,b){return (groups[b].vc/groups[b].vs||0)-(groups[a].vc/groups[a].vs||0);});
+      order.forEach(function(g){
+        var gg=groups[g],gchg=gg.vs?gg.vc/gg.vs:0,key=dim+"|"+g,coll=!!mfCollapsed[key];
+        var gc=gchg>=0?up:down;
+        var h=document.createElement("div");h.className="mf-group"+(coll?" collapsed":"");
+        h.innerHTML="<span class='gcar'>▾</span><span class='gname'>"+g+"</span>"+
+          "<span class='gcnt'>"+gg.rows.length+"</span>"+
+          "<span class='gchg' style='color:"+gc+";'>"+(gchg>=0?"+":"")+gchg.toFixed(2)+"%</span>"+
+          "<span class='gvol'>"+fmtVol(Math.round(gg.vs))+"億</span>";
+        fbox.appendChild(h);
+        var body=[];
+        gg.rows.sort(function(a,b){return b.r.chg-a.r.chg;}).forEach(function(o){
+          var el=mfRowEl(o.r,"",up,down,momMax,volMax,o.sub);
+          if(coll)el.style.display="none";
+          body.push(el);fbox.appendChild(el);
+        });
+        h.onclick=function(){mfCollapsed[key]=!mfCollapsed[key];
+          h.classList.toggle("collapsed");
+          body.forEach(function(el){el.style.display=mfCollapsed[key]?"none":"";});};
+      });
+      if(note)note.textContent=(dim==="ind"?"依產業分組（大產業 › 次產業）":"依題材分組（同一主題可跨多個題材）")+
+        " · 組標題為成交金額加權漲跌 · 點標題可收合 · 量單位億元";
+    }
     var net=rows.reduce(function(a,d){return a+d.mom;},0);
     var foot=document.createElement("div");foot.className="flow-foot";
     foot.innerHTML="<span>← 流出 ／ 流入 →（"+m.label+" 配色）</span><span>全市場淨動能 "+(net>=0?"+":"")+net.toFixed(0)+"</span>";
@@ -541,7 +606,14 @@
     b.onclick=function(){curMfPer=x[0];syncMfPer();renderFlow(MK[cur]);};mfptabs.appendChild(b);});
   function syncMfPer(){[].forEach.call(mfptabs.children,function(b){b.className=b.dataset.p===curMfPer?"on":"";});}
 
-  syncCtry();syncMfPer();render();
+  // 維度切換：動能排序 / 依產業 / 依題材
+  var mfdtabs=document.getElementById("mfDimTabs");
+  [["mom","動能"],["ind","依產業"],["theme","依題材"]].forEach(function(x){var b=document.createElement("button");
+    b.textContent=x[1];b.dataset.d=x[0];
+    b.onclick=function(){curMfDim=x[0];syncMfDim();renderFlow(MK[cur]);};mfdtabs.appendChild(b);});
+  function syncMfDim(){[].forEach.call(mfdtabs.children,function(b){b.className=b.dataset.d===curMfDim?"on":"";});}
+
+  syncCtry();syncMfPer();syncMfDim();render();
 
   // 供應鏈節點反向點回來：捲動並高亮資金流向對應主題列
   window.highlightFlowTheme=function(name){
