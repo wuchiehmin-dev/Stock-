@@ -539,6 +539,8 @@ def compute_day_record(quotes):
             "id": t["id"],
             "name": t["name"],
             "group": t.get("group"),
+            "industry": t.get("industry", []),  # 兩層產業 [大, 次]
+            "themes": t.get("themes", []),       # 所屬題材（可多個）
             "tier": t.get("tier"),
             "supplies_to": t.get("supplies_to", []),
             "chg": {"d": chg_d},
