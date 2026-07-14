@@ -710,12 +710,25 @@
   var curChain="ai";
   var stageMap={now:["st-now","現在出量"],soon:["st-soon","即將放量"],later:["st-later","待驗證"]};
 
-  // 公司當日漲跌：真實資料以「股名」對照全市場（涵蓋非 master 名單的台股）；
-  // 有真實資料但查不到（外國公司、簡稱不符）不顯示；無真實資料時用名稱雜湊樣板值
+  // 供應鏈標籤顯示名 → 證交所正式簡稱（顯示名與官方簡稱不一致時對照）
+  var CO_ALIAS={
+    "日月光":"日月光投控","京元電":"京元電子","中興電工":"中興電","華新麗華":"華新",
+    "中華電信":"中華電","國巨":"國巨*","中鋼機械":"中鋼構","天力":"天力離岸","上緯":"上緯投控",
+    "Acer":"宏碁","Asus":"華碩","Insyde":"系微",
+    "中租":"中租-KY","臻鼎":"臻鼎-KY","貿聯":"貿聯-KY"
+  };
+  // 公司當日漲跌：真實資料以「股名」對照全市場，依序試 原名→別名→+-KY→去英數尾綴；
+  // 仍查不到（外國公司、未上市）不顯示；無真實資料時用名稱雜湊樣板值
   function companyChg(name){
     if(window.LIVE_TW){
       var m=window.LIVE_NAME_CHG||{};
-      return m[name]!=null?m[name]:null;
+      if(m[name]!=null)return m[name];
+      var a=CO_ALIAS[name];
+      if(a&&m[a]!=null)return m[a];
+      if(m[name+"-KY"]!=null)return m[name+"-KY"];
+      var s=name.replace(/[A-Za-z0-9/\-]+$/,"");  // 創意GUC→創意、群創FOPLP→群創、鴻海MIH→鴻海
+      if(s&&s!==name&&m[s]!=null)return m[s];
+      return null;
     }
     var h=0;for(var i=0;i<name.length;i++){h=(h*31+name.charCodeAt(i)+13)%997;}
     return +((h/997)*8-4).toFixed(1);
