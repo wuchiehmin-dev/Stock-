@@ -93,6 +93,7 @@
   .flow-col.down{border-top:3px solid #1d9e75;}
   .node{background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:9px 11px;margin-bottom:9px;}
   .node:last-child{margin-bottom:0;}
+  .node.hl,.mf-row.hl{outline:2px solid #3987e5;box-shadow:0 0 0 4px rgba(57,135,229,.18);border-radius:7px;}
   .node .role{font-size:11px;color:var(--ink2);margin-bottom:5px;letter-spacing:.3px;display:flex;align-items:center;justify-content:space-between;gap:6px;}
   .node .rstage{font-size:9px;font-family:var(--mono);padding:1px 6px;border-radius:3px;white-space:nowrap;}
   .cos-tags{display:flex;flex-wrap:wrap;gap:4px;}
@@ -459,11 +460,18 @@
       var pos=r.chg>=0,c=pos?up:down;
       var mpos=r.mom>=0,mc=mpos?up:down,mpct=Math.abs(r.mom)/momMax*100;
       var row=document.createElement("div");row.className="mf-row";
+      row.dataset.tname=r.n;
       row.innerHTML="<span class='mf-rank'>"+(i+1)+"</span>"+
         "<span class='mf-name'>"+r.n+"</span>"+
         "<div class='mf-mom' style='justify-content:"+(mpos?"flex-start":"flex-end")+";'><i style='width:"+mpct+"%;background:"+mc+";'></i><span class='mf-momval'>"+(mpos?"+":"")+r.mom+"</span></div>"+
         "<div class='mf-chg' style='color:"+c+";'>"+(pos?"+":"")+r.chg.toFixed(1)+"%</div>"+
         "<div class='mf-vol'><i style='width:"+Math.max(4,r.vol/volMax*100)+"%;'></i><span>"+fmtVol(r.vol)+"</span></div>";
+      if(cur==="TW"){
+        // 點主題列 → 跳到供應鏈上中下游對應節點
+        row.style.cursor="pointer";
+        row.title="點擊查看此主題在供應鏈上中下游的位置";
+        row.onclick=function(){if(window.highlightChainTheme)window.highlightChainTheme(r.n);};
+      }
       fbox.appendChild(row);
     });
     var net=rows.reduce(function(a,d){return a+d.mom;},0);
@@ -500,6 +508,15 @@
   function syncMfPer(){[].forEach.call(mfptabs.children,function(b){b.className=b.dataset.p===curMfPer?"on":"";});}
 
   syncCtry();syncMfPer();render();
+
+  // 供應鏈節點反向點回來：捲動並高亮資金流向對應主題列
+  window.highlightFlowTheme=function(name){
+    var el=document.querySelector("#flowlist .mf-row[data-tname='"+String(name).replace(/'/g,"\\'")+"']");
+    if(!el)return;
+    el.scrollIntoView({behavior:"smooth",block:"center"});
+    el.classList.add("hl");
+    setTimeout(function(){el.classList.remove("hl");},2600);
+  };
 
   // 嘗試載入真實資料 data.json（GitHub Pages 上會有；本機雙擊沒有則維持樣板）
   fetch("data.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
@@ -661,7 +678,7 @@
   function nodeHtml(n){
     var st="";
     if(n.stage&&stageMap[n.stage]) st="<span class='rstage "+stageMap[n.stage][0]+"'>"+stageMap[n.stage][1]+"</span>";
-    return "<div class='node'><div class='role'><span>"+n.role+"</span>"+st+"</div>"+
+    return "<div class='node' data-tname='"+n.role+"'><div class='role'><span>"+n.role+"</span>"+st+"</div>"+
       "<div class='cos-tags'>"+n.cos.map(coTag).join("")+"</div></div>";
   }
   function colHtml(cls,title,en,nodes){
@@ -680,6 +697,12 @@
         colHtml("mid","中游｜製造・封裝・模組","MIDSTREAM",mc.mid)+
         colHtml("down","下游｜整合・組裝・終端","DOWNSTREAM",mc.down)+"</div>";
       document.getElementById("chainEnable").innerHTML="";
+      // 節點可點：反向跳回資金流向的對應主題列
+      document.querySelectorAll("#chainFlow .node").forEach(function(el){
+        el.style.cursor="pointer";
+        el.title="點擊查看此主題的資金流向排名";
+        el.onclick=function(){if(window.highlightFlowTheme)window.highlightFlowTheme(el.dataset.tname);};
+      });
       return;
     }
     var d=CHAINS[curChain];
@@ -716,6 +739,16 @@
   function syncChain(){[].forEach.call(ctabs.children,function(b){b.className=b.dataset.k===curChain?"on":"";});}
   curChain="master_tw";
   syncChain();renderChain();
+
+  // 資金流向列點過來：切到台股主檔視圖、捲動並高亮對應主題節點
+  window.highlightChainTheme=function(name){
+    if(curChain!=="master_tw"){curChain="master_tw";syncChain();renderChain();}
+    var el=document.querySelector("#chainFlow .node[data-tname='"+String(name).replace(/'/g,"\\'")+"']");
+    if(!el)return;
+    el.scrollIntoView({behavior:"smooth",block:"center"});
+    el.classList.add("hl");
+    setTimeout(function(){el.classList.remove("hl");},2600);
+  };
 })();
 
 // ====== 供應鏈關係圖（力導向網路，獨立 IIFE）======
