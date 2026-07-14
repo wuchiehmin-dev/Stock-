@@ -313,6 +313,23 @@
     links.forEach(function(l){nm[l.source].deg++;nm[l.target].deg++;});
     return {nodes:Object.keys(nm).map(function(k){return nm[k];}),links:links};
   }
+  // 公司名單→重疊最多（≥2 檔）的主題名（供應鏈節點反向配對資金流向列用）
+  window.masterThemeMatch=function(cosNames){
+    var best=1,bn=null;
+    MASTER_TW.forEach(function(t){
+      var ov=0;
+      t.s.forEach(function(st){if(cosNames.indexOf(st[1])>=0)ov++;});
+      if(ov>best){best=ov;bn=t.name;}
+    });
+    return bn;
+  };
+  // 主題名→成分股名清單（供應鏈自動配對「最相關主題」用）
+  window.masterThemeStocks=function(name){
+    for(var i=0;i<MASTER_TW.length;i++){
+      if(MASTER_TW[i].name===name) return MASTER_TW[i].s.map(function(st){return st[1];});
+    }
+    return null;
+  };
   window.masterToGraph=masterToGraph;
   window.masterToHeatmap=masterToHeatmap;
   window.masterToFlow=masterToFlow;
@@ -539,6 +556,8 @@
   fetch("data.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
     if(j && j.heatmap){
       window.LIVE_TW=j;
+      // 全市場股名→當日漲跌（供應鏈各主題的公司標籤用）
+      if(j.name_chg) window.LIVE_NAME_CHG=j.name_chg;
       // 個股真實漲跌對照：日（mChg 用）與週（關係圖外框用）
       if(j.stock_chg){
         window.LIVE_CHG={};window.LIVE_CHG_W={};
@@ -691,11 +710,22 @@
   var curChain="ai";
   var stageMap={now:["st-now","現在出量"],soon:["st-soon","即將放量"],later:["st-later","待驗證"]};
 
+  // 公司當日漲跌：真實資料以「股名」對照全市場（涵蓋非 master 名單的台股）；
+  // 有真實資料但查不到（外國公司、簡稱不符）不顯示；無真實資料時用名稱雜湊樣板值
+  function companyChg(name){
+    if(window.LIVE_TW){
+      var m=window.LIVE_NAME_CHG||{};
+      return m[name]!=null?m[name]:null;
+    }
+    var h=0;for(var i=0;i<name.length;i++){h=(h*31+name.charCodeAt(i)+13)%997;}
+    return +((h/997)*8-4).toFixed(1);
+  }
   function coTag(c){var cls="co-"+(["tw","us","kr","jp","cn"].indexOf(c[1])>=0?c[1]:"x");
+    var v=(typeof c[2]==="number")?c[2]:companyChg(c[0]);
     var chg="";
-    if(typeof c[2]==="number"){
-      var cc=c[2]>=0?"#e24b4a":"#1d9e75";
-      chg="<span class='cochg' style='color:"+cc+";'>"+(c[2]>=0?"+":"")+c[2].toFixed(1)+"%</span>";
+    if(typeof v==="number"){
+      var cc=v>=0?"#e24b4a":"#1d9e75";
+      chg="<span class='cochg' style='color:"+cc+";'>"+(v>=0?"+":"")+v.toFixed(1)+"%</span>";
     }
     return "<span class='co "+cls+"'>"+c[0]+chg+"</span>";}
   function nodeHtml(n){
@@ -734,6 +764,15 @@
       return;
     }
     var d=CHAINS[curChain];
+    // 各主題節點的漲跌 = 成員公司當日漲跌的平均（查得到的才計入），每次渲染重算
+    d.up.concat(d.mid,d.down).forEach(function(n){
+      var s=0,cn=0;
+      n.cos.forEach(function(co){
+        var v=(typeof co[2]==="number")?co[2]:companyChg(co[0]);
+        if(typeof v==="number"){s+=v;cn++;}
+      });
+      n.chg=cn?+(s/cn).toFixed(2):undefined;
+    });
     var allNodes=d.up.concat(d.mid,d.down,d.enable||[]);
     var hasStage=allNodes.some(function(n){return n.stage;});
     document.getElementById("stageHint").innerHTML=hasStage?
@@ -756,6 +795,17 @@
         return "<div class='chain-eitem'><span class='en'>"+n.role+"</span>"+n.cos.map(coTag).join("")+st+"</div>";
       }).join("")+"</div></div>";}
     else en.innerHTML="";
+
+    // 節點反向配對：成分股與 master 主題重疊 ≥2 檔的節點可點回資金流向
+    d.up.concat(d.mid,d.down).forEach(function(nd){
+      var el=document.querySelector("#chainFlow .node[data-tname='"+nd.role.replace(/'/g,"\\'")+"']");
+      if(!el)return;
+      var tn=window.masterThemeMatch?window.masterThemeMatch(nd.cos.map(function(co){return co[0];})):null;
+      if(!tn)return;
+      el.style.cursor="pointer";
+      el.title="點擊查看「"+tn+"」的資金流向排名";
+      el.onclick=function(){if(window.highlightFlowTheme)window.highlightFlowTheme(tn);};
+    });
   }
 
   var ctabs=document.getElementById("chainTabs");
@@ -771,10 +821,27 @@
   // data.json 載入後重繪，讓主題/成分股漲跌換成真實值
   window.rerenderChain=function(){renderChain();};
 
-  // 資金流向列點過來：切到台股主檔視圖、捲動並高亮對應主題節點
+  // 資金流向列點過來：用成分股重疊自動找「最相關的供應鏈主題」切過去並高亮該角色節點；
+  // 重疊不足（傳產金融等沒有對應主題）才退回台股主檔視圖
   window.highlightChainTheme=function(name){
-    if(curChain!=="master_tw"){curChain="master_tw";syncChain();renderChain();}
-    var el=document.querySelector("#chainFlow .node[data-tname='"+String(name).replace(/'/g,"\\'")+"']");
+    var target=null,best=1; // 至少要重疊 2 檔才算對應（避免台積電這種到處都有的誤配）
+    var stocks=window.masterThemeStocks?window.masterThemeStocks(name):null;
+    if(stocks){
+      Object.keys(CHAINS).forEach(function(ck){
+        var c=CHAINS[ck];
+        ["up","mid","down"].forEach(function(tier){
+          (c[tier]||[]).forEach(function(nd){
+            var ov=0;
+            nd.cos.forEach(function(co){if(stocks.indexOf(co[0])>=0)ov++;});
+            if(ov>best){best=ov;target={chain:ck,role:nd.role};}
+          });
+        });
+      });
+    }
+    var view=target?target.chain:"master_tw";
+    var tname=target?target.role:name;
+    if(curChain!==view){curChain=view;syncChain();renderChain();}
+    var el=document.querySelector("#chainFlow .node[data-tname='"+String(tname).replace(/'/g,"\\'")+"']");
     if(!el)return;
     el.scrollIntoView({behavior:"smooth",block:"center"});
     el.classList.add("hl");
