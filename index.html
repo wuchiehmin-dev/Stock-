@@ -698,7 +698,8 @@
           {role:"散熱/電源",mid:"cooling",cos:[["奇鋐","tw"],["雙鴻","tw"],["台達電","tw"]]}],
       enable:[{role:"EDA/IP 工具",cos:[["Synopsys","us"],["Cadence","us"],["Arm","x"]]},
           {role:"AI 框架軟體",cos:[["CUDA","us"],["PyTorch","us"]]},
-          {role:"先進封裝材料",cos:[["味之素ABF","jp"],["Resonac","jp"]]}]},
+          {role:"先進封裝材料",cos:[["味之素ABF","jp"],["Resonac","jp"]]}],
+      edges:[["半導體設備","晶圓代工"],["矽晶圓/材料","晶圓代工"],["IP/EDA","晶圓代工"],["IP/EDA","GPU/加速器"],["晶圓代工","CoWoS先進封裝"],["晶圓代工","GPU/加速器"],["CoWoS先進封裝","GPU/加速器"],["HBM記憶體","GPU/加速器"],["CPO/光通訊","伺服器組裝"],["GPU/加速器","伺服器組裝"],["散熱/電源","伺服器組裝"]]},
     cxl:{label:"CXL 記憶體互連",
       demand:{label:"需求端 · 雲端資本支出（記憶體佔比 2024約8%→2026約30%）",cos:[["Microsoft","us"],["Amazon","us"],["Google","us"],["Meta","us"]]},
       up:[{role:"IP 矽智財",mid:"ip",stage:"now",cos:[["Synopsys","us"],["Cadence","us"],["創意GUC","tw"],["M31","tw"]]},
@@ -709,7 +710,8 @@
           {role:"伺服器整機",mid:"ai_server",stage:"soon",cos:[["廣達","tw"],["緯穎","tw"],["Dell","us"]]},
           {role:"雲端客戶（終端）",stage:"now",cos:[["Microsoft","us"],["Meta","us"]]}],
       enable:[{role:"軟體/OS 支援",cos:[["Linux核心","x"],["Windows Server 2025","us"]]},
-          {role:"光互連(fabric)",stage:"later",cos:[["Broadcom","us"],["聯亞","tw"],["上詮","tw"]]}]},
+          {role:"光互連(fabric)",stage:"later",cos:[["Broadcom","us"],["聯亞","tw"],["上詮","tw"]]}],
+      edges:[["IP 矽智財","控制晶片（咽喉）"],["DRAM 顆粒原廠","CXL 記憶體模組"],["控制晶片（咽喉）","CXL 記憶體模組"],["CXL 記憶體模組","池化/交換器"],["CXL 記憶體模組","伺服器整機"],["池化/交換器","伺服器整機"],["伺服器整機","雲端客戶（終端）"]]},
     ev:{label:"電動車",
       demand:{label:"需求端 · 整車廠與消費者",cos:[["Tesla","us"],["BYD","cn"],["VW集團","x"],["Toyota","jp"]]},
       up:[{role:"電池正極材料",cos:[["康普","tw"],["美琪瑪","tw"],["中碳","tw"],["住友金屬","jp"]]},
@@ -723,7 +725,8 @@
           {role:"車用面板/座艙",mid:"panel",cos:[["友達","tw"],["群創","tw"],["聯發科","tw"]]}],
       enable:[{role:"電池管理BMS",cos:[["台達電","tw"],["致茂","tw"]]},
           {role:"車用OS/軟體",cos:[["QNX","x"],["Android Auto","us"]]},
-          {role:"充電標準/介面",cos:[["CCS","x"],["NACS","us"]]}]},
+          {role:"充電標準/介面",cos:[["CCS","x"],["NACS","us"]]}],
+      edges:[["鋰/鎳礦","電池正極材料"],["電池正極材料","電池芯/模組"],["電池芯/模組","整車製造"],["驅動馬達","整車製造"],["功率半導體","三電/車電零組件"],["三電/車電零組件","整車製造"],["車用面板/座艙","整車製造"],["充電樁/基建","整車製造"]]},
     space:{label:"低軌衛星/太空",
       demand:{label:"需求端 · 衛星營運商",cos:[["Starlink","us"],["Amazon Leo","us"],["OneWeb","x"],["Telesat","x"]]},
       up:[{role:"高頻元件GaAs/GaN",mid:"epitaxy",stage:"now",cos:[["穩懋","tw"],["全訊","tw"],["同欣電","tw"]]},
@@ -736,7 +739,8 @@
           {role:"衛星服務/落地",cos:[["Starlink","us"],["中華電信","tw"],["遠傳","tw"]]}],
       enable:[{role:"地面測控軟體",cos:[["凌群","tw"],["新鼎","tw"]]},
           {role:"太空級認證/測試",cos:[["耀登","tw"],["台灣檢驗","tw"]]},
-          {role:"雷射星間鏈路",stage:"soon",cos:[["Mynaric","x"],["Sony Space","jp"]]}]},
+          {role:"雷射星間鏈路",stage:"soon",cos:[["Mynaric","x"],["Sony Space","jp"]]}],
+      edges:[["高頻材料/PCB","高頻元件GaAs/GaN"],["射頻晶片","通訊模組"],["高頻元件GaAs/GaN","衛星本體/封裝"],["高頻元件GaAs/GaN","通訊模組"],["衛星本體/封裝","發射服務"],["通訊模組","地面站/終端設備"],["發射服務","衛星服務/落地"],["地面站/終端設備","衛星服務/落地"]]},
     phone:{label:"智慧手機",
       demand:{label:"需求端 · 品牌與消費者",cos:[["Apple","us"],["Samsung","kr"],["小米","cn"]]},
       up:[{role:"晶圓代工",mid:"foundry",cos:[["台積電","tw"],["Samsung","kr"]]},
@@ -749,7 +753,8 @@
           {role:"品牌",cos:[["Apple","us"],["Samsung","kr"],["小米","cn"]]}],
       enable:[{role:"行動OS",cos:[["iOS","us"],["Android","us"]]},
           {role:"通訊基頻5G/6G",cos:[["高通","us"],["聯發科","tw"]]},
-          {role:"EDA工具",cos:[["Synopsys","us"],["Cadence","us"]]}]},
+          {role:"EDA工具",cos:[["Synopsys","us"],["Cadence","us"]]}],
+      edges:[["晶圓代工","處理器SoC"],["處理器SoC","組裝代工EMS"],["鏡頭/光學","組裝代工EMS"],["被動元件/PCB","組裝代工EMS"],["面板OLED","組裝代工EMS"],["記憶體","組裝代工EMS"],["組裝代工EMS","品牌"]]},
     pc:{label:"電腦/筆電",
       demand:{label:"需求端 · 品牌與企業採購",cos:[["HP","us"],["Dell","us"],["Lenovo","cn"],["Apple","us"]]},
       up:[{role:"CPU/GPU",cos:[["Intel","us"],["AMD","us"],["NVIDIA","us"]]},
@@ -762,7 +767,8 @@
           {role:"品牌",cos:[["HP","us"],["Dell","us"],["Lenovo","cn"],["Acer","tw"],["Asus","tw"]]}],
       enable:[{role:"作業系統",cos:[["Windows","us"],["macOS","us"]]},
           {role:"BIOS/韌體",cos:[["AMI","us"],["Insyde","tw"]]},
-          {role:"介面標準",cos:[["PCIe","x"],["USB-IF","x"]]}]},
+          {role:"介面標準",cos:[["PCIe","x"],["USB-IF","x"]]}],
+      edges:[["CPU/GPU","主機板/顯卡"],["晶圓代工","CPU/GPU"],["主機板/顯卡","ODM組裝"],["機殼/散熱/電源","ODM組裝"],["連接器/PCB","主機板/顯卡"],["面板/記憶體","ODM組裝"],["ODM組裝","品牌"]]},
     solar:{label:"太陽能",
       demand:{label:"需求端 · 系統開發與電廠",cos:[["台電","tw"],["雲豹能源","tw"],["NextEra","us"]]},
       up:[{role:"多晶矽料",cos:[["Wacker","x"],["OCI","kr"],["保利協鑫","cn"]]},
@@ -775,7 +781,8 @@
           {role:"電廠營運",cos:[["台電","tw"],["中租","tw"],["NextEra","us"]]}],
       enable:[{role:"逆變器/併網軟體",cos:[["台達電","tw"],["SMA","x"]]},
           {role:"認證/檢測",cos:[["TÜV","x"],["工研院","tw"]]},
-          {role:"EPC工程管理",cos:[["雲豹能源","tw"],["永鑫","tw"]]}]},
+          {role:"EPC工程管理",cos:[["雲豹能源","tw"],["永鑫","tw"]]}],
+      edges:[["多晶矽料","矽晶圓/晶錠"],["矽晶圓/晶錠","太陽能電池片"],["耗材漿料/切割線","太陽能電池片"],["太陽能電池片","模組"],["模組","系統建置/EPC"],["逆變器","系統建置/EPC"],["系統建置/EPC","電廠營運"]]},
     wind:{label:"離岸風電",
       demand:{label:"需求端 · 開發商與電網",cos:[["沃旭","x"],["RWE","x"],["台電","tw"]]},
       up:[{role:"鋼材/樹脂原料",mid:"steel",cos:[["中鋼","tw"],["上緯","tw"],["浦項鋼鐵","kr"]]},
@@ -788,7 +795,8 @@
           {role:"風場營運/IPP",cos:[["沃旭","x"],["台電","tw"],["風睿能源","tw"]]}],
       enable:[{role:"海事工程船隊",cos:[["台船環海","tw"],["伯威海事","tw"]]},
           {role:"SCADA監控",cos:[["西門子","x"],["台達電","tw"]]},
-          {role:"認證/融資",cos:[["DNV","x"],["中信金","tw"]]}]},
+          {role:"認證/融資",cos:[["DNV","x"],["中信金","tw"]]}],
+      edges:[["鋼材/樹脂原料","水下基礎"],["鋼材/樹脂原料","海纜/塔架"],["葉片/齒輪箱","風機系統整機"],["風機系統整機","海事工程/安裝"],["水下基礎","海事工程/安裝"],["海纜/塔架","海事工程/安裝"],["電力設施","風場營運/IPP"],["海事工程/安裝","風場營運/IPP"]]},
     vr:{label:"VR/AR",
       demand:{label:"需求端 · 品牌與消費者",cos:[["Meta","us"],["Apple","us"],["Samsung","kr"]]},
       up:[{role:"Micro-OLED面板",stage:"soon",cos:[["Sony","jp"],["視涯","cn"],["京東方","cn"]]},
@@ -801,7 +809,8 @@
           {role:"品牌",cos:[["Meta","us"],["Apple","us"],["Samsung","kr"],["PICO","cn"]]}],
       enable:[{role:"XR OS/SDK",cos:[["Meta Horizon","us"],["visionOS","us"]]},
           {role:"空間運算軟體",cos:[["Unity","us"],["Unreal","us"]]},
-          {role:"光學檢測",cos:[["致茂","tw"],["由田","tw"]]}]},
+          {role:"光學檢測",cos:[["致茂","tw"],["由田","tw"]]}],
+      edges:[["CMOS Si晶圓代工","感測/眼球追蹤IC"],["CMOS Si晶圓代工","XR平台SoC"],["Micro-OLED面板","光學模組組裝"],["光學鏡片/波導","光學模組組裝"],["感測/眼球追蹤IC","整機組裝"],["XR平台SoC","整機組裝"],["光學模組組裝","整機組裝"],["整機組裝","品牌"]]},
     robot:{label:"機器人/人形機器人",
       demand:{label:"需求端 · 車廠與品牌導入",cos:[["Tesla","us"],["Figure AI","us"],["現代/Boston Dynamics","kr"],["小鵬","cn"]]},
       up:[{role:"減速器/滾珠螺桿",mid:"robot_parts",stage:"now",cos:[["上銀","tw"],["直得","tw"],["Harmonic Drive","jp"],["綠的諧波","cn"]]},
@@ -813,7 +822,8 @@
       down:[{role:"製造產線導入",cos:[["鴻海","tw"],["BMW","x"],["Amazon倉儲","us"]]},
           {role:"系統整合/代工",mid:"robot",cos:[["廣達","tw"],["鴻海","tw"]]}],
       enable:[{role:"AI模仿學習框架",stage:"soon",cos:[["NVIDIA Isaac","us"],["Google DeepMind","us"]]},
-          {role:"感測器融合軟體",cos:[["Sensata","us"]]}]},
+          {role:"感測器融合軟體",cos:[["Sensata","us"]]}],
+      edges:[["減速器/滾珠螺桿","整機系統"],["力矩感測/伺服馬達","整機系統"],["微型馬達/驅動IC","整機系統"],["AI晶片/控制","整機系統"],["靈巧手/感測","整機系統"],["整機系統","製造產線導入"],["整機系統","系統整合/代工"]]},
     hbm:{label:"記憶體/HBM",
       demand:{label:"需求端 · AI伺服器與雲端資本支出",cos:[["Microsoft","us"],["Google","us"],["Meta","us"],["Amazon","us"]]},
       up:[{role:"矽晶圓",mid:"wafer",cos:[["環球晶","tw"],["SUMCO","jp"],["信越","jp"]]},
@@ -824,7 +834,8 @@
       down:[{role:"AI加速器/GPU",cos:[["NVIDIA","us"],["AMD","us"],["Google TPU","us"]]},
           {role:"伺服器整機",mid:"ai_server",cos:[["廣達","tw"],["緯穎","tw"],["鴻海","tw"]]}],
       enable:[{role:"記憶體控制IC",cos:[["祥碩","tw"],["群聯","tw"]]},
-          {role:"先進封裝材料",cos:[["味之素ABF","jp"]]}]},
+          {role:"先進封裝材料",cos:[["味之素ABF","jp"]]}],
+      edges:[["矽晶圓","DRAM顆粒原廠"],["TSV/先進封裝設備","HBM堆疊封測"],["DRAM顆粒原廠","HBM堆疊封測"],["HBM堆疊封測","AI加速器/GPU"],["AI加速器/GPU","伺服器整機"],["模組/通路","伺服器整機"]]},
     semi_local:{label:"半導體本土化/去美化",
       demand:{label:"需求端 · 地緣政治驅動的供應鏈重組",cos:[["美國CHIPS法案","us"],["中國國產替代政策","cn"],["台灣出口管制","tw"]]},
       up:[{role:"設備國產化(中)",stage:"now",cos:[["中微公司","cn"],["北方華創","cn"],["拓荊科技","cn"]]},
@@ -835,8 +846,10 @@
       down:[{role:"美系AI晶片客戶",cos:[["NVIDIA","us"],["AMD","us"],["Apple","us"]]},
           {role:"中系晶片客戶",cos:[["華為海思","cn"]]}],
       enable:[{role:"出口管制/關稅政策",cos:[["美國商務部BIS","us"],["台灣經濟部","tw"]]},
-          {role:"EDA工具授權限制",cos:[["Synopsys","us"],["Cadence","us"]]}]}
+          {role:"EDA工具授權限制",cos:[["Synopsys","us"],["Cadence","us"]]}],
+      edges:[["設備國產化(中)","在地化晶圓代工"],["設備國產化(美)","在地化晶圓代工"],["關鍵材料自主","在地化晶圓代工"],["在地化晶圓代工","先進封裝在地化"],["先進封裝在地化","美系AI晶片客戶"],["在地化晶圓代工","中系晶片客戶"]]}
   };
+  window.SUPPLY_CHAINS=CHAINS; // 匯出給關係圖模組共用（單一資料來源，避免再養第三份供應鏈資料）
 
   var curChain="ai";
   var curChainFocus=null; // 非null時，台股主檔只顯示此主題的一階上下游（避免全部44主題塞在一起）
@@ -1047,55 +1060,9 @@
   };
 })();
 
-// ====== 供應鏈關係圖（力導向網路，獨立 IIFE）======
+// ====== 供應鏈關係圖（力導向網路，獨立 IIFE；策展鏈資料共用 SUPPLY_CHAINS，不另養一份）======
 (function(){
-  var G={
-    ai:{label:"AI算力",roles:{
-      "半導體設備":{tier:"up",cos:["ASML","東京威力","Advantest","DISCO"]},"矽晶圓/材料":{tier:"up",cos:["信越","SUMCO","環球晶","味之素ABF"]},"IP/EDA":{tier:"up",cos:["Arm","Synopsys","Cadence"]},
-      "晶圓代工":{tier:"mid",cos:["台積電","聯電","Samsung"]},"CoWoS封裝":{tier:"mid",cos:["台積電","日月光","京元電"]},"HBM記憶體":{tier:"mid",cos:["SK海力士","Samsung","Micron"]},"CPO/光通訊":{tier:"mid",cos:["聯亞","波若威","上詮"]},
-      "GPU/加速器":{tier:"down",cos:["NVIDIA","AMD","博通"]},"伺服器組裝":{tier:"down",cos:["廣達","緯穎","鴻海","緯創"]},"散熱/電源":{tier:"down",cos:["奇鋐","雙鴻","台達電"]}},
-      edges:[["半導體設備","晶圓代工"],["矽晶圓/材料","晶圓代工"],["IP/EDA","晶圓代工"],["IP/EDA","GPU/加速器"],["晶圓代工","CoWoS封裝"],["晶圓代工","GPU/加速器"],["CoWoS封裝","GPU/加速器"],["HBM記憶體","GPU/加速器"],["CPO/光通訊","伺服器組裝"],["GPU/加速器","伺服器組裝"],["散熱/電源","伺服器組裝"]]},
-    cxl:{label:"CXL",roles:{
-      "IP矽智財":{tier:"up",cos:["Synopsys","Cadence","創意GUC","M31"]},"DRAM原廠":{tier:"up",cos:["SK海力士","三星","美光"]},
-      "控制晶片":{tier:"mid",cos:["瀾起Montage","Astera Labs","Marvell","Microchip"]},"CXL模組":{tier:"mid",cos:["SK海力士","三星","美光"]},
-      "池化/交換器":{tier:"down",cos:["XConn","瀾起"]},"伺服器整機":{tier:"down",cos:["廣達","緯穎","Dell"]},"雲端客戶":{tier:"down",cos:["Microsoft","Meta"]}},
-      edges:[["IP矽智財","控制晶片"],["DRAM原廠","CXL模組"],["控制晶片","CXL模組"],["CXL模組","池化/交換器"],["CXL模組","伺服器整機"],["池化/交換器","伺服器整機"],["伺服器整機","雲端客戶"]]},
-    ev:{label:"電動車",roles:{
-      "電池正極材料":{tier:"up",cos:["康普","美琪瑪","中碳","住友金屬"]},"功率半導體":{tier:"up",cos:["英飛凌","安森美","羅姆"]},
-      "電池芯/模組":{tier:"mid",cos:["寧德時代","LG新能源","Panasonic"]},"驅動馬達":{tier:"mid",cos:["富田","和大","日本電產"]},"車電零組件":{tier:"mid",cos:["台達電","貿聯","和碩"]},
-      "整車製造":{tier:"down",cos:["Tesla","BYD","鴻海MIH"]},"車用面板":{tier:"down",cos:["友達","群創","聯發科"]}},
-      edges:[["電池正極材料","電池芯/模組"],["電池芯/模組","整車製造"],["驅動馬達","整車製造"],["功率半導體","車電零組件"],["車電零組件","整車製造"],["車用面板","整車製造"]]},
-    space:{label:"衛星",roles:{
-      "高頻元件":{tier:"up",cos:["穩懋","全訊","同欣電"]},"高頻材料/PCB":{tier:"up",cos:["台光電","華通","燿華"]},
-      "發射服務":{tier:"mid",cos:["SpaceX","Rocket Lab"]},"衛星本體":{tier:"mid",cos:["群創","Lockheed"]},"通訊模組":{tier:"mid",cos:["昇達科","萊德光電"]},
-      "地面設備":{tier:"down",cos:["啟碁","台揚","正文","信錦"]},"衛星服務":{tier:"down",cos:["Starlink","中華電信","遠傳"]}},
-      edges:[["高頻材料/PCB","高頻元件"],["高頻元件","衛星本體"],["高頻元件","通訊模組"],["衛星本體","發射服務"],["通訊模組","地面設備"],["發射服務","衛星服務"],["地面設備","衛星服務"]]},
-    phone:{label:"手機",roles:{
-      "晶圓代工":{tier:"up",cos:["台積電","Samsung"]},"面板OLED":{tier:"up",cos:["三星顯示","LG Display","京東方"]},"記憶體":{tier:"up",cos:["SK海力士","三星","美光"]},
-      "處理器SoC":{tier:"mid",cos:["聯發科","高通","Apple自研"]},"鏡頭/光學":{tier:"mid",cos:["大立光","玉晶光","舜宇"]},"被動元件":{tier:"mid",cos:["國巨","臻鼎","村田"]},
-      "組裝EMS":{tier:"down",cos:["鴻海","和碩","立訊"]},"品牌":{tier:"down",cos:["Apple","Samsung","小米"]}},
-      edges:[["晶圓代工","處理器SoC"],["處理器SoC","組裝EMS"],["鏡頭/光學","組裝EMS"],["被動元件","組裝EMS"],["面板OLED","組裝EMS"],["記憶體","組裝EMS"],["組裝EMS","品牌"]]},
-    pc:{label:"電腦",roles:{
-      "CPU/GPU":{tier:"up",cos:["Intel","AMD","NVIDIA"]},"面板/記憶體":{tier:"up",cos:["友達","群創","SK海力士"]},
-      "主機板/顯卡":{tier:"mid",cos:["華碩","技嘉","微星"]},"散熱/電源":{tier:"mid",cos:["奇鋐","台達電","光寶科"]},"連接器/PCB":{tier:"mid",cos:["嘉澤","健鼎","金像電"]},
-      "ODM組裝":{tier:"down",cos:["廣達","仁寶","緯創","英業達"]},"品牌":{tier:"down",cos:["HP","Dell","Lenovo","Acer","Asus"]}},
-      edges:[["CPU/GPU","主機板/顯卡"],["主機板/顯卡","ODM組裝"],["散熱/電源","ODM組裝"],["連接器/PCB","主機板/顯卡"],["面板/記憶體","ODM組裝"],["ODM組裝","品牌"]]},
-    solar:{label:"太陽能",roles:{
-      "多晶矽料":{tier:"up",cos:["Wacker","OCI","保利協鑫"]},"矽晶圓/晶錠":{tier:"up",cos:["中美晶","合晶","隆基"]},
-      "電池片":{tier:"mid",cos:["元晶","茂迪","通威"]},"模組":{tier:"mid",cos:["聯合再生","元晶","First Solar"]},"逆變器":{tier:"mid",cos:["台達電","盛齊綠能","SolarEdge"]},
-      "系統/EPC":{tier:"down",cos:["雲豹能源","永鑫能源"]},"電廠營運":{tier:"down",cos:["台電","中租","NextEra"]}},
-      edges:[["多晶矽料","矽晶圓/晶錠"],["矽晶圓/晶錠","電池片"],["電池片","模組"],["模組","系統/EPC"],["逆變器","系統/EPC"],["系統/EPC","電廠營運"]]},
-    wind:{label:"風電",roles:{
-      "鋼材/樹脂":{tier:"up",cos:["中鋼","上緯","浦項鋼鐵"]},"電力設施":{tier:"up",cos:["華城","士電","中興電工"]},
-      "風機整機":{tier:"mid",cos:["Vestas","Siemens Gamesa","GE Vernova"]},"水下基礎":{tier:"mid",cos:["世紀風電","興達海基"]},"海纜/塔架":{tier:"mid",cos:["華新麗華","中鋼機械"]},
-      "海事工程":{tier:"down",cos:["台船環海","伯威海事"]},"風場營運":{tier:"down",cos:["沃旭","台電","風睿能源"]}},
-      edges:[["鋼材/樹脂","水下基礎"],["鋼材/樹脂","海纜/塔架"],["風機整機","海事工程"],["水下基礎","海事工程"],["海纜/塔架","海事工程"],["電力設施","風場營運"],["海事工程","風場營運"]]},
-    vr:{label:"VR/AR",roles:{
-      "Micro-OLED":{tier:"up",cos:["Sony","視涯","京東方"]},"光學鏡片":{tier:"up",cos:["大立光","玉晶光","揚明光"]},"CMOS代工":{tier:"up",cos:["台積電"]},
-      "感測IC":{tier:"mid",cos:["原相","奇景"]},"XR平台SoC":{tier:"mid",cos:["高通","聯發科"]},"光學模組":{tier:"mid",cos:["舜宇","歌爾","佳世達"]},
-      "整機組裝":{tier:"down",cos:["立訊","廣達","和碩"]},"品牌":{tier:"down",cos:["Meta","Apple","Samsung","PICO"]}},
-      edges:[["CMOS代工","感測IC"],["CMOS代工","XR平台SoC"],["Micro-OLED","光學模組"],["光學鏡片","光學模組"],["感測IC","整機組裝"],["XR平台SoC","整機組裝"],["光學模組","整機組裝"],["整機組裝","品牌"]]}
-  };
+  var G=window.SUPPLY_CHAINS||{};
   var tierFill={up:"#9b93dd",mid:"#5a9be5",down:"#3fb890"},tierOrder={up:0,mid:1,down:2},curPer="d",curView="master_tw";
   function chgOf(name,per){var seed=per==="w"?37:13,h=0;for(var i=0;i<name.length;i++){h=(h*31+name.charCodeAt(i)+seed)%997;}var base=(h/997)*8-4;return +(per==="w"?base*1.6:base).toFixed(1);}
   // 有真實漲跌（data.json stock_chg）就用真的，否則退回名稱雜湊的樣板值
@@ -1116,10 +1083,14 @@
     }
     var nm={},ls={},links=[];var keys=scope==="all"?Object.keys(G):[scope];
     keys.forEach(function(ck){var c=G[ck];
-      Object.keys(c.roles).forEach(function(rn){var r=c.roles[rn];r.cos.forEach(function(co){
+      // SUPPLY_CHAINS 的節點掛在 up/mid/down 陣列（enable 不入圖），先攤成 角色名→{tier,cos名單}
+      var roles={};
+      ["up","mid","down"].forEach(function(tier){(c[tier]||[]).forEach(function(nd){
+        roles[nd.role]={tier:tier,cos:nd.cos.map(function(co){return co[0];})};});});
+      Object.keys(roles).forEach(function(rn){var r=roles[rn];r.cos.forEach(function(co){
         if(!nm[co])nm[co]={id:co,tier:r.tier,chains:{},roles:{},deg:0};nm[co].chains[c.label]=1;nm[co].roles[rn]=1;
         if(tierOrder[r.tier]<tierOrder[nm[co].tier])nm[co].tier=r.tier;});});
-      c.edges.forEach(function(e){var f=c.roles[e[0]],t=c.roles[e[1]];if(!f||!t)return;
+      (c.edges||[]).forEach(function(e){var f=roles[e[0]],t=roles[e[1]];if(!f||!t)return;
         f.cos.forEach(function(a){t.cos.forEach(function(b){if(a===b)return;var k=a<b?a+"|"+b:b+"|"+a;if(ls[k])return;ls[k]=1;links.push({source:a,target:b});});});});
     });
     links.forEach(function(l){nm[l.source].deg++;nm[l.target].deg++;});
@@ -1160,7 +1131,9 @@
   function dg(ev,d){d.fx=ev.x;d.fy=ev.y;}
   function de(ev,d){if(!ev.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}
 
-  var views=[["master_tw","★台股主檔"],["ai","AI算力"],["cxl","CXL"],["ev","電動車"],["space","衛星"],["phone","手機"],["pc","電腦"],["solar","太陽能"],["wind","風電"],["vr","VR/AR"],["all","★全景"]];
+  var views=[["master_tw","★台股主檔"]].concat(
+    Object.keys(G).map(function(k){return [k,G[k].label];}),
+    [["all","★全景"]]);
   var vseg=document.getElementById("grViewSeg");
   views.forEach(function(v){var b=document.createElement("button");b.textContent=v[1];b.dataset.v=v[0];
     b.onclick=function(){[].forEach.call(vseg.children,function(x){x.className=x.dataset.v===v[0]?"on":"";});render(v[0]);};vseg.appendChild(b);});
