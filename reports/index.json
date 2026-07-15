@@ -6,5 +6,11 @@
    "title": "DIGITIMES 每日彙整 2026/07/15"
   }
  ],
- "weekly": []
+ "weekly": [
+  {
+   "date": "2026-07-10",
+   "file": "weekly/weekly_20260710.html",
+   "title": "產業週報 - 記憶體/HBM超級循環"
+  }
+ ]
 }
