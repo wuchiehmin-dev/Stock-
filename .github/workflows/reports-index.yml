@@ -1,0 +1,49 @@
+name: 更新報告索引
+
+# 本機排程（每日新聞匯總 / 每週焦點報告）把 .md 推進 reports/ 後，
+# 自動重建 reports/index.json，讓網站「報告」分頁列出新報告。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'reports/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 取出 repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 設定 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 重建 reports/index.json
+        run: python build_reports_index.py
+
+      - name: 若索引有變動則 commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain reports/index.json)" ]; then
+            git add reports/index.json
+            git commit -m "自動更新報告索引"
+            n=0
+            until git push; do
+              n=$((n+1))
+              if [ "$n" -ge 4 ]; then echo "重試 4 次仍失敗"; exit 1; fi
+              sleep 5
+              git pull --rebase -X theirs origin main
+            done
+            echo "報告索引已更新。"
+          else
+            echo "索引無變動，略過。"
+          fi
