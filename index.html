@@ -738,6 +738,14 @@
     curRpt=item.file;
     [].forEach.call(document.querySelectorAll(".rpt-item"),function(x){x.classList.remove("on");});
     if(el)el.classList.add("on");
+    if(/\.html?$/i.test(item.file)){ // HTML 報告（如 DIGITIMES 每日彙整）用 iframe 原樣呈現
+      document.getElementById("rptBody").innerHTML=
+        "<div style='margin:0 0 8px;text-align:right'><a href='reports/"+item.file+
+        "' target='_blank' rel='noopener' style='font-size:13px'>在新分頁開啟 ↗</a></div>"+
+        "<iframe src='reports/"+item.file+
+        "' style='width:100%;height:78vh;border:0;border-radius:10px;background:#fff'></iframe>";
+      return;
+    }
     document.getElementById("rptBody").innerHTML="<div class='rpt-empty'>載入中 ...</div>";
     fetch("reports/"+item.file,{cache:"no-store"}).then(function(r){
       if(!r.ok)throw new Error(r.status);return r.text();}).then(renderMd)
