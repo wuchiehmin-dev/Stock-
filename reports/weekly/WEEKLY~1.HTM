@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>產業週報 - 記憶體/HBM超級循環</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js" integrity="sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF" crossorigin="anonymous"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --primary: #1f3864;
+    --accent: #4472c4;
+    --bg: #ffffff;
+    --panel: #f5f8fc;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Noto Sans CJK TC", "Microsoft JhengHei", sans-serif;
+    color: #1a1a1a;
+    background: var(--bg);
+    line-height: 1.65;
+    margin: 0;
+    padding: 20px;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 22px; color: var(--primary); border-bottom: 3px solid var(--primary); padding-bottom: 8px; }
+  h2 { font-size: 17px; color: var(--primary); margin-top: 30px; border-left: 6px solid var(--accent); padding-left: 10px; }
+  h3 { font-size: 14px; color: #2e5395; margin-top: 14px; }
+  p { margin: 6px 0; text-align: justify; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
+  th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #dce6f5; color: var(--primary); }
+  tr:nth-child(even) { background: var(--panel); }
+  .exec-box { background: var(--panel); border-left: 5px solid var(--primary); padding: 10px 14px; margin: 10px 0; border-radius: 4px; }
+  .exec-box b { color: var(--primary); }
+  .chart-wrap { background: var(--panel); border-radius: 8px; padding: 14px; margin: 14px 0; }
+  .caption { text-align: center; font-size: 12px; color: #666; margin-top: 6px; }
+  .source-note { font-size: 11px; color: #777; margin-top: 4px; }
+  .swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+  .swot-cell { border: 1px solid #999; border-radius: 6px; padding: 10px; }
+  .swot-cell h4 { margin: 0 0 6px 0; }
+  .s { background: #e2efda; } .w { background: #fce4d6; } .o { background: #ddebf7; } .t { background: #fbe5d6; }
+  ul { margin: 6px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  .footer-note { font-size: 11px; color: #888; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 8px; }
+  .mermaid { background: white; padding: 10px; border-radius: 8px; }
+  .toc { background: var(--panel); border-radius: 8px; padding: 12px 18px; margin: 12px 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  canvas { max-width: 100%; }
+</style>
+</head>
+<body>
+
+<h1>產業週報：記憶體/HBM超級循環 (Memory / HBM Supercycle)</h1>
+<p><b>報告期間：</b>2026/07/06 ~ 2026/07/10　｜　<b>發布日期：</b>2026年7月11日</p>
+
+<div class="toc">
+<b>目錄：</b>
+<a href="#s1">1.摘要</a> ｜ <a href="#s2">2.市場概況</a> ｜ <a href="#s3">3.競爭者分析</a> ｜ <a href="#s4">4.技術趨勢</a> ｜ <a href="#s5">5.產品價格分析</a> ｜ <a href="#s6">6.供應鏈</a> ｜ <a href="#s7">7.法規政策</a> ｜ <a href="#s8">8.投資動態</a> ｜ <a href="#s9">9.SWOT</a> ｜ <a href="#s10">10.風險分析</a> ｜ <a href="#s11">11.未來預測</a> ｜ <a href="#s12">12.對公司影響</a>
+</div>
+
+<h2 id="s1">1. Executive Summary</h2>
+<div class="exec-box">
+<p><b>①現象：</b>南亞科2Q26毛利率飆升至79.5%(超越台積電)，DRAM合約價1Q26單季QoQ暴漲81%，TrendForce預估3Q26伺服器DRAM合約價再漲13-18% QoQ；DIGITIMES首頁2026/07/10新聞中「記憶體/HBM」相關主題達10則，遠超其他議題，顯示市場關注度急遽升溫。</p>
+<p><b>②市場反應：</b>SK海力士、三星、美光股價在2026年第二季大幅走揚(美光年初至今一度上漲逾260%)，SK海力士赴美IPO獲7倍超額認購；但進入7月後，市場憂心SK海力士與三星合計5,750億美元的擴產計畫恐致未來供過於求，記憶體類股於7月初一度重挫超過20%進入技術性熊市，即便三星財報並未走空，股價仍同步下跌。</p>
+<p><b>③受益受害分野：</b>受益者包括SK海力士、三星、美光、南亞科等記憶體原廠(HBM/DRAM報價與毛利雙升)，以及CoWoS設備供應鏈(如ASML、應材)與OSAT封測廠；受害者則是400美元以下平價手機品牌與消費性電子代工廠，因DRAM/NAND成本飆升，2027年平價手機出貨恐年減22%。</p>
+<p><b>④潛在變數：</b>未來2-3季須觀察(a)SK海力士、三星、美光鉅額資本支出是否於2027年後期形成產能過剩、(b)長鑫存儲(CXMT) HBM3E量產進度與中國記憶體自主化速度、(c)美國政府對南韓/美光廠商在美設廠與對中國出口管制政策是否進一步收緊或鬆綁。</p>
+</div>
+<div class="chart-wrap">
+  <canvas id="topicChart"></canvas>
+  <p class="caption">圖1-1：DIGITIMES首頁2026/07/10各主題新聞則數統計(因每日彙整尚未累積7天歷史，本圖為當日主題則數統計，非7日趨勢)</p>
+</div>
+
+<h2 id="s2">2. 市場概況</h2>
+<p>全球記憶體產業在AI伺服器需求帶動下，自2025年下半年起進入「超級循環」(Supercycle)，其中HBM(High Bandwidth Memory)為成長核心。根據市場研究與產業媒體彙整，HBM市場規模預期於2028年達約1,000億美元的可觸及市場(TAM)，年複合成長率(CAGR)呈現數十%的高速擴張；傳統DRAM因原廠將產能大舉轉向HBM生產(SK海力士、三星、美光合計約93%產能投入HBM相關生產)，導致一般DRAM供給排擠、價格同步飆漲。</p>
+<p>主要應用面：(1)AI伺服器與資料中心的HBM3E/HBM4需求(輝達、AMD等AI加速器)；(2)雲端服務商(OpenAI、Meta、Google、Microsoft)自建資料中心對高階記憶體的直接採購；(3)一般伺服器RDIMM及PC/行動裝置的DDR5/LPDDR5需求。TrendForce預估2026年資料中心將消耗全球逾70%的高階記憶體晶片產出。產業成熟度方面，HBM技術仍處於快速迭代期(HBM3E → HBM4)，傳統DRAM/NAND則為成熟市場但因供給結構性改變重新進入漲價循環，預期此輪缺貨與漲價將延續至2027年甚至更久，SK海力士董事長並警告2030年前全球記憶體供給恐持續低於需求約20%。</p>
+
+<h2 id="s3">3. 競爭者分析</h2>
+<table>
+<tr><th>公司</th><th>產品種類與市占</th><th>技術特色</th><th>未來展望(投資)</th></tr>
+<tr>
+  <td><b>SK海力士 (SK Hynix)</b></td>
+  <td>HBM市占約50-55%(全球第一)；DRAM/NAND均衡布局；2026年上市Nasdaq受7倍超額認購</td>
+  <td>HBM3E量產領先，HBM4送樣客戶驗證中；1c DRAM製程推進</td>
+  <td>追加150億美元先進製程晶圓投資；規劃130億美元(19兆韓元)封裝廠，預計2027年底完工；與三星合計資本支出達5,750億美元</td>
+</tr>
+<tr>
+  <td><b>三星電子 (Samsung)</b></td>
+  <td>HBM市占約35-40%；DRAM/NAND/晶圓代工垂直整合</td>
+  <td>2026年HBM產能目標成長50%；HBM4與1c DRAM製程並行推進；受美國政府施壓擴大在美設廠</td>
+  <td>2Q26財報獲利雖佳(預估營業利益590億美元)但股價仍受產能過剩疑慮拖累；持續評估美國德州廠擴產</td>
+</tr>
+<tr>
+  <td><b>美光 (Micron)</b></td>
+  <td>HBM市占約5-10%；HBM產能已全數售罄至2027年</td>
+  <td>DRAM/HBM全面擴產，紐約Clay新廠將自2027年起投產DRAM/HBM</td>
+  <td>宣布至2035年於美國投資約2,500億美元擴大製造產能；紐約百億美元晶圓廠已動土(美國商務部長親自出席)</td>
+</tr>
+<tr>
+  <td><b>南亞科 (Nanya Technology)</b></td>
+  <td>利基型DRAM(DDR4/DDR5/LPDDR)；無HBM產品線，聚焦特殊規格市場</td>
+  <td>DDR5營收占比約10%，LPDDR5將於2026下半年進入客戶驗證；先進封裝與國際大廠合作(四大國際巨頭入股)</td>
+  <td>2026年資本支出逾520億元新台幣，新廠預計2027年第一季裝機；管理層看好記憶體供需缺口延續數季以上，3Q26合約價高於2Q26</td>
+</tr>
+<tr>
+  <td><b>長鑫存儲 (CXMT)</b></td>
+  <td>中國最大、全球第四大DRAM廠，2025年第4季全球DRAM市占約7.67%；核心產品為LPDDR(66.4%)與DDR(31.9%)，尚無量產HBM</td>
+  <td>三座12吋晶圓廠運營中；HBM3E量產目標訂於2027年，HBM產能規劃由2025年末約5kwspm擴增至2026年末約30kwspm、2027年末約55kwspm</td>
+  <td>A股IPO募資至少人民幣295億元(約43億美元)，為中國今年最大IPO之一；用於擴產與次世代DRAM研發，2026年首季營收年增719%</td>
+</tr>
+</table>
+
+<h2 id="s4">4. 技術趨勢：一條環環相扣的技術鏈</h2>
+<p>因為AI加速器對頻寬與容量的需求持續攀升，SK海力士、三星、美光被迫將愈來愈高比例的晶圓產能挪去生產HBM(目前合計約93%產能投入HBM相關生產)，所以傳統DRAM(尤其伺服器RDIMM、PC/行動裝置DDR5/LPDDR5)供給被嚴重排擠，形成「一般DRAM缺貨」的瓶頸；這個瓶頸因此催生了下游先進封裝產能(尤其台積電CoWoS)成為新的關鍵制約點——傳2027年TSMC CoWoS月產能雖將擴大至至少20萬片，設備廠仍苦等台積電訂單分配完畢，顯示封裝產能擴充速度跟不上HBM堆疊需求成長；與此同時，HBM4世代較HBM3E帶來約67%的世代價格躍升(HBM4約500美元/顆對比HBM3E 12層約300美元)，促使三大原廠加速資本支出競賽，SK海力士與三星合計規劃資本支出達5,750億美元。最終，這條「AI需求→HBM產能排擠→一般DRAM缺貨→CoWoS封裝瓶頸→巨額資本再投入」的技術鏈，總結出方向性意涵：短期內記憶體與先進封裝仍是AI供應鏈最緊繃的兩個環節，任一環節的產能釋出時點，都將是觀察本輪超級循環是否降溫的關鍵指標。</p>
+
+<h2 id="s5">5. 產品價格分析</h2>
+<h3>歷史趨勢(過去12個月至今，QoQ/YoY)</h3>
+<p>根據TrendForce公開新聞稿，DRAM合約價自2025年下半年起加速上漲：2026年第一季DRAM產業合約價季增高達81% QoQ(TrendForce，2026/06/01發布)；南亞科2Q26財報顯示DRAM平均售價單季漲幅逾六成，帶動毛利率由前一季67.9%再攀升至79.5%(南亞科法說會，2026/07/10)。台灣模組廠傳出2026年第三季DRAM現貨價再漲20-30%、NAND漲35-40%(TrendForce引述ADATA說法，2026/07/08)。</p>
+<h3>未來數月預測</h3>
+<p>TrendForce於2026年7月9日發布報告指出，受限於長約鎖定部分漲幅，3Q26伺服器DRAM合約價預估QoQ再漲13-18%(TrendForce新聞稿，2026/07/09)；PC DRAM合約價預估同期上修至15-20%(原預估8-13%)。展望2027年，DIGITIMES(2026/07/10)報導HBM報價預期「翻倍上揚」，市場推估HBM4對HBM3E的世代漲幅可達2.5倍；南亞科總經理李培瑛表示3Q26合約價將續高於2Q26，供需缺口預期延續數季以上(南亞科法說會，2026/07/10)。</p>
+<div class="chart-wrap">
+  <canvas id="priceChart"></canvas>
+  <p class="caption">圖5-1：DRAM / HBM 合約價趨勢(QoQ%，過去12個月至今 + 未來預估情境，虛線為預測)</p>
+  <p class="source-note">資料來源：TrendForce新聞稿彙整、DIGITIMES、南亞科法說會，估算值僅供方向性參考</p>
+</div>
+
+<h3>關鍵公司股價走勢</h3>
+<div class="chart-wrap">
+  <canvas id="stockChart"></canvas>
+  <p class="caption">圖5-2：SK海力士、三星電子、美光股價相對走勢(2026/04=100)</p>
+  <p class="source-note">資料來源：Yahoo Finance、CNBC、Bloomberg、Motley Fool報導彙整，數值為方向性估算。三家公司2026年第二季股價大幅走揚(美光年初至今一度漲逾260%)，惟進入7月後因市場憂心供過於求，股價自高點拉回逾20%，圖中7月數據反映此拉回走勢。</p>
+</div>
+
+<h2 id="s6">6. Supply Chain 供應鏈結構</h2>
+<div class="mermaid">
+flowchart LR
+  subgraph UP["上游: 設備/材料"]
+    ASML["ASML<br/>EUV/DUV微影設備"]
+    AMAT["應用材料<br/>Applied Materials"]
+    COWOS["台積電 CoWoS<br/>先進封裝產能"]
+  end
+  subgraph MID["中游: 記憶體製造商"]
+    SKH["SK海力士<br/>HBM市佔約50-55%"]
+    SAM["三星電子<br/>HBM市佔約35-40%"]
+    MU["美光<br/>HBM市佔約5-10%"]
+    NANYA["南亞科<br/>DDR4/DDR5利基型"]
+    CXMT["長鑫存儲(CXMT)<br/>新進入者/中國DRAM龍頭"]
+  end
+  subgraph DOWN["下游: 封測/伺服器OEM/雲端服務商"]
+    OSAT["OSAT封測廠<br/>南韓/台灣"]
+    OEM["伺服器OEM<br/>Dell/Supermicro/緯創"]
+    CLOUD["雲端服務商<br/>OpenAI/Meta/Google/Microsoft"]
+  end
+  ASML --> SKH
+  ASML --> SAM
+  ASML --> MU
+  AMAT --> SKH
+  AMAT --> SAM
+  COWOS -->|HBM堆疊封裝| SKH
+  COWOS -->|HBM堆疊封裝| SAM
+  SKH --> OSAT
+  SAM --> OSAT
+  MU --> OSAT
+  OSAT --> OEM
+  OEM --> CLOUD
+  SKH -.->|HBM直供AI晶片廠| CLOUD
+  SAM -.->|HBM直供AI晶片廠| CLOUD
+  MU -.->|HBM直供AI晶片廠| CLOUD
+  CXMT -.->|潛在替代/競爭| NANYA
+  CXMT -.->|潛在新供應來源 國產替代| OSAT
+  ASML -.->|受出口管制限制| CXMT
+
+  style CXMT fill:#fce4d6,stroke:#c00000,stroke-dasharray: 5 5
+</div>
+<p>本供應鏈中最關鍵的兩個連結，一是「台積電CoWoS封裝產能 → SK海力士/三星HBM堆疊」——CoWoS是HBM與AI運算晶片整合唯一量產驗證的先進封裝技術，其產能擴充速度(2027年目標至少20萬片/月)直接決定了HBM實際出貨能力上限；二是「長鑫存儲(CXMT) → 南亞科/既有DRAM供應鏈」的潛在替代關係——CXMT透過A股IPO募資擴產，2027年底HBM產能規劃達約55kwspm，雖尚無法撼動SK海力士與三星的HBM領先地位，但其在傳統DRAM(尤其LPDDR、DDR)的低價競爭，長期可能對南亞科等利基型廠商及中系模組廠形成價格壓力，同時也是美中科技戰下中國「記憶體自主化」的指標性進展。</p>
+
+<h2 id="s7">7. 法規政策</h2>
+<ul>
+<li>美國商務部長Lutnick於2026年7月9-10日公開喊話，敦促三星電子與SK海力士擴大在美國本土的記憶體晶片產能，並在美光紐約Clay廠動土典禮上發表相關談話(Bloomberg, 2026/07/09；KED Global, 2026/07/10)。</li>
+<li>川普政府先前警告，未在美國設廠的記憶體晶片製造商可能面臨最高100%關稅(Bloomberg引述報導)。</li>
+<li>美國政府已核准三星電子與SK海力士2026年度出口許可，允許兩家公司持續向其在中國的晶圓廠出貨半導體設備，以年度審批制取代舊有的無限期豁免制度(Tom's Hardware, 2026)。</li>
+<li>中國方面，長鑫存儲(CXMT)透過A股IPO募資至少人民幣295億元，象徵中國持續強化記憶體產業自主政策支持力道。</li>
+</ul>
+
+<h2 id="s8">8. 投資動態</h2>
+<ul>
+<li>美光宣布至2035年於美國投資約2,500億美元擴大製造產能，涵蓋DRAM至HBM全產品線；紐約Clay百億美元級晶圓廠已動土，預計2027年投產(多方媒體報導，2026/07)。</li>
+<li>SK海力士追加150億美元先進製程晶圓投資，並規劃130億美元(19兆韓元)封裝廠，預計2027年底完工；同時完成美股(Nasdaq)上市，獲得7倍超額認購，反映資本市場對HBM題材的高度追捧。</li>
+<li>南亞科2026年資本支出逾新台幣520億元，新廠預計2027年第一季裝機，並引入四大國際客戶入股布局。</li>
+<li>長鑫存儲(CXMT)A股IPO募資至少人民幣295億元(約43億美元)，為中國今年最大IPO案之一，資金將用於擴產與次世代DRAM/HBM研發。</li>
+<li>台積電CoWoS封裝產能持續擴大，2027年月產能目標至少20萬片，但設備廠仍苦等訂單分配完畢，顯示先進封裝供給仍為整體供應鏈瓶頸。</li>
+</ul>
+
+<h2 id="s9">9. SWOT分析</h2>
+<div class="swot-grid">
+  <div class="swot-cell s"><h4>Strengths 優勢</h4>
+    <ul>
+      <li>HBM技術門檻高，SK海力士/三星/美光形成寡占，議價能力強</li>
+      <li>AI伺服器需求結構性成長，非單純景氣循環</li>
+      <li>南亞科等台廠具備彈性利基型產品組合</li>
+    </ul>
+  </div>
+  <div class="swot-cell w"><h4>Weaknesses 弱點</h4>
+    <ul>
+      <li>資本支出龐大(SK海力士+三星合計5,750億美元)，財務槓桿與執行風險高</li>
+      <li>先進封裝(CoWoS)產能仍為供應鏈瓶頸，制約整體出貨</li>
+      <li>股價已計入大量樂觀預期，波動風險高(7月已見逾20%回檔)</li>
+    </ul>
+  </div>
+  <div class="swot-cell o"><h4>Opportunities 機會</h4>
+    <ul>
+      <li>HBM4世代帶來67%以上的世代價格躍升，毛利率持續攀升</li>
+      <li>美國政策鼓勵在地製造，帶來新一輪設廠與補助機會</li>
+      <li>DDR5/LPDDR5等次世代規格滲透率提升，帶動產品組合升級</li>
+    </ul>
+  </div>
+  <div class="swot-cell t"><h4>Threats 威脅</h4>
+    <ul>
+      <li>長鑫存儲(CXMT)等中國廠商加速擴產，長期威脅傳統DRAM價格與市占</li>
+      <li>巨額資本支出若集中於2027-2028年開出，恐導致產能過剩、價格反轉</li>
+      <li>地緣政治與出口管制政策不確定性(美中科技戰、關稅威脅)</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="s10">10. 風險分析</h2>
+<ul>
+<li><b>產能過剩風險：</b>SK海力士與三星合計5,750億美元資本支出計畫若如期於2027年後陸續開出，市場擔憂恐重演記憶體產業「暴漲暴跌」的歷史循環，此為7月初記憶體股一度重挫超過20%進入熊市的主因。</li>
+<li><b>下游需求分歧風險：</b>消費性電子(尤其400美元以下平價手機)因記憶體成本飆升，恐面臨2027年出貨年減22%的壓力，顯示漲價循環對非AI應用端造成明顯排擠效應。</li>
+<li><b>地緣政治風險：</b>美國關稅威脅(未在美設廠恐面臨最高100%關稅)、對中出口管制動態變化，皆可能影響三大原廠資本支出配置與長鑫存儲擴產節奏。</li>
+<li><b>技術執行風險：</b>HBM4量產與良率爬升進度若不如預期，可能推遲原廠營收認列，影響財測與股價表現。</li>
+</ul>
+
+<h2 id="s11">11. 未來預測(3~12個月)</h2>
+<ul>
+<li><b>3個月內(2026Q3)：</b>伺服器DRAM合約價預估QoQ再漲13-18%，PC DRAM上修至15-20%；南亞科、SK海力士等法說會可望持續釋出正向財測。</li>
+<li><b>6個月內(2026Q4)：</b>觀察台積電CoWoS產能是否如期擴大朝140,000片/月邁進，以及CXMT HBM3E量產進度是否提前，作為供給面是否鬆動的先行指標。</li>
+<li><b>12個月內(2027上半年)：</b>HBM4開始放量，價格可望較HBM3E呈現世代性躍升(市場預估HBM均價可能翻倍)；同時SK海力士、三星、美光新建產能陸續動工/投產，須密切關注是否出現產能過剩訊號，及消費性電子(平價手機、PC)需求因記憶體漲價而進一步走弱的程度。</li>
+</ul>
+
+<h2 id="s12">12. 對公司影響(Opportunities/Risks/建議)</h2>
+<h3>Opportunities 機會</h3>
+<ul>
+<li>記憶體原廠(SK海力士、三星、美光、南亞科)可望持續受惠於HBM與傳統DRAM雙漲價循環，毛利率有望維持高檔至少至2027年。</li>
+<li>CoWoS供應鏈(封測設備、材料商)可受惠於台積電擴產帶來的長期訂單能見度。</li>
+<li>掌握次世代DDR5/LPDDR5/HBM4驗證進度領先的廠商，可優先卡位客戶資格與訂單。</li>
+</ul>
+<h3>Risks 風險</h3>
+<ul>
+<li>下游品牌廠(手機、PC、消費性電子)成本壓力持續加大，尤其平價機種恐面臨出貨大幅下滑。</li>
+<li>過度倚賴記憶體原廠資本支出周期的設備/材料供應商，須留意2027-2028年產能開出後的訂單能見度風險。</li>
+<li>投資人須注意記憶體類股評價已隱含高度樂觀預期，短期波動風險提高。</li>
+</ul>
+<h3>建議</h3>
+<ul>
+<li>下游品牌廠宜提前鎖定記憶體長約與價格，降低現貨採購曝險，並評估產品規格降規/成本轉嫁策略。</li>
+<li>供應鏈設備/材料廠商建議分散客戶集中度風險，並持續追蹤CoWoS與HBM4量產時程以掌握訂單節奏。</li>
+<li>投資與採購決策者應密切關注SK海力士/三星資本支出執行進度、CXMT量產時程，以及美國關稅/出口管制政策變化，作為調整部位與供應鏈策略的關鍵觸發點。</li>
+</ul>
+
+<div class="footer-note">
+資料來源彙整：DIGITIMES(2026/07/10首頁新聞)、TrendForce新聞稿(2026/06/01、2026/06/15、2026/07/03、2026/07/08、2026/07/09)、Bloomberg(2026/07/09)、CNBC(2026/07/02)、Tom's Hardware、The Motley Fool(2026/07/06)、KED Global(2026/07/10)、Korea Times(2026/07/10)、SemiAnalysis、Grokipedia、TechBuzzChina、南亞科2Q26法說會(2026/07/10，工商時報/鉅亨網/壹蘋新聞網報導)、科技新報(TechNews)。本報告部分股價與價格數值為根據公開報導方向性估算，非交易所即時數據，僅供產業趨勢參考，不構成投資建議。<br>
+本圖表因每日彙整尚未累積7天歷史資料，主題聲量圖以2026/07/10 DIGITIMES首頁當日新聞則數統計呈現，非7日趨勢。
+</div>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'default', securityLevel: 'loose' });
+
+const topicCtx = document.getElementById('topicChart').getContext('2d');
+new Chart(topicCtx, {
+  type: 'bar',
+  data: {
+    labels: ['記憶體/HBM超級循環', 'AI伺服器/資料中心', '先進封裝/CoWoS', '半導體設備', '其他'],
+    datasets: [{
+      label: '2026/07/10 新聞則數',
+      data: [10, 3, 2, 2, 3],
+      backgroundColor: ['#1f3864', '#8faadc', '#8faadc', '#8faadc', '#8faadc']
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false }, title: { display: true, text: 'DIGITIMES首頁 2026/07/10 各主題新聞則數' } },
+    scales: { y: { beginAtZero: true, title: { display: true, text: '新聞則數' } } }
+  }
+});
+
+const priceCtx = document.getElementById('priceChart').getContext('2d');
+new Chart(priceCtx, {
+  type: 'line',
+  data: {
+    labels: ['2025Q3', '2025Q4', '2026Q1', '2026Q2', '2026Q3(F)', '2026Q4(F)', '2027(F)'],
+    datasets: [
+      {
+        label: 'DRAM合約價 QoQ% (歷史)',
+        data: [5, 15, 81, 45, 15.5, null, null],
+        borderColor: '#d62728',
+        backgroundColor: '#d62728',
+        segment: {},
+        spanGaps: false
+      },
+      {
+        label: 'DRAM合約價 QoQ% (預測)',
+        data: [null, null, null, null, 15.5, 12, 30],
+        borderColor: '#d62728',
+        borderDash: [6, 4],
+        backgroundColor: '#d62728'
+      },
+      {
+        label: 'HBM均價 QoQ% (歷史)',
+        data: [8, 20, 35, 25, 20, null, null],
+        borderColor: '#9467bd',
+        backgroundColor: '#9467bd'
+      },
+      {
+        label: 'HBM均價 累積漲幅% (2027預測)',
+        data: [null, null, null, null, 20, 18, 100],
+        borderColor: '#9467bd',
+        borderDash: [6, 4],
+        backgroundColor: '#9467bd'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { title: { display: true, text: 'DRAM / HBM 合約價趨勢 (QoQ%, 過去12個月至今 + 未來預估)' } },
+    scales: { y: { title: { display: true, text: 'QoQ 變化 (%)' } } }
+  }
+});
+
+const stockCtx = document.getElementById('stockChart').getContext('2d');
+new Chart(stockCtx, {
+  type: 'line',
+  data: {
+    labels: ['2026-04', '2026-05', '2026-06', '2026-07 (至7/10)'],
+    datasets: [
+      { label: 'SK Hynix (000660.KS)', data: [100, 128, 158, 141], borderColor: '#1f77b4', backgroundColor: '#1f77b4' },
+      { label: 'Samsung Electronics (005930.KS)', data: [100, 115, 132, 122], borderColor: '#ff7f0e', backgroundColor: '#ff7f0e' },
+      { label: 'Micron (MU)', data: [100, 145, 205, 178], borderColor: '#2ca02c', backgroundColor: '#2ca02c' }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { title: { display: true, text: '關鍵公司股價走勢 (相對期初%變化, 2026/04=100)' } },
+    scales: { y: { title: { display: true, text: '指數化股價 (期初=100)' } } }
+  }
+});
+</script>
+
+</body>
+</html>
