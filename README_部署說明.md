@@ -121,19 +121,45 @@ GitHub Pages「報告」分頁自動列出、點選即可閱讀
 - 第一行寫 `# 標題`，清單會顯示這個標題
 - `reports/index.json` 不用手動維護，push 後 Actions 會自動重建
 
+### 前提：本機能對這個 repo 執行 `git push`
+
+先確認你電腦上有這個 repo 的 clone，且能直接 `git push` 成功（不會跳密碼錯誤）。
+如果還沒設定過：
+
+1. 沒 clone 過的話先 `git clone https://github.com/wuchiehmin-dev/Stock-.git`
+2. GitHub 網頁右上角頭像 → Settings → 左側最下面 Developer settings →
+   Personal access tokens → Tokens (classic) → Generate new token，
+   勾選 `repo` 權限，設定好期限，產生後**立刻複製**（離開頁面就看不到了）。
+3. 本機終端機執行（`<TOKEN>` 換成剛剛複製的字串）：
+   ```
+   cd 你的-Stock--repo路徑
+   git remote set-url origin https://<TOKEN>@github.com/wuchiehmin-dev/Stock-.git
+   ```
+4. 測試：`git pull` 再 `git push`（沒改東西的話 push 會顯示 "Everything up-to-date"，
+   代表認證成功）。
+
+已經能手動 push 的話可以跳過以上，直接看下一節。
+
 ### 本機排程要改什麼
 
-前提：你的電腦有這個 repo 的 clone 且能 push（`git clone` 過並登入 GitHub）。
-在你既有的排程任務指示最後，加上類似這段：
+在你既有的排程任務指示最後，加上類似這段（`<repo路徑>` 換成你電腦上的實際路徑）：
 
 > 報告完成後，把內容存成 Markdown 到本機的 Stock- repo：
-> 每日報告存 `reports/daily/今天日期.md`、每週報告存 `reports/weekly/日期.md`，
-> 第一行為 `# 報告標題`。然後執行：
-> `git pull --rebase origin main`，`git add reports`，
-> `git commit -m "新增報告"`，`git push origin main`。
+> 每日報告存 `reports/daily/今天日期(YYYY-MM-DD).md`、
+> 每週報告存 `reports/weekly/本週最後交易日日期(YYYY-MM-DD).md`，
+> 第一行為 `# 報告標題`。然後在該 repo 目錄下依序執行：
+> ```
+> cd <repo路徑>
+> git pull --rebase origin main
+> git add reports
+> git commit -m "新增報告 <日期>"
+> git push origin main
+> ```
+> 如果 push 失敗（代表 main 被別的 commit 推進了），先 `git pull --rebase origin main`
+> 再重新 push 一次。
 
-推上去約 1-2 分鐘後，網站重新整理就看得到。
-`reports/` 裡目前有兩篇範例報告示範格式，流程跑通後可刪除。
+推上去約 1-2 分鐘後，網站重新整理就看得到（GitHub Actions 會自動重建報告索引）。
+`reports/` 裡目前有兩篇範例報告示範格式，流程跑通、第一篇真實報告成功推上去後可以刪除。
 
 ---
 
