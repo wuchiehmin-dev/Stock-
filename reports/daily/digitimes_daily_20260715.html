@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DIGITIMES 每日彙整 2026/07/15</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 0;
+  background: #f4f5f7; color: #1a1a1a;
+  font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  line-height: 1.75; font-size: 17px;
+}
+.wrap { max-width: 820px; margin: 0 auto; padding: 16px; }
+header.top {
+  background: linear-gradient(135deg, #0b3d91 0%, #1666c9 100%);
+  color: #fff; border-radius: 14px; padding: 22px 20px; margin-bottom: 18px;
+}
+header.top .date { font-size: 14px; opacity: .85; letter-spacing: 1px; }
+header.top h1 { margin: 6px 0 4px; font-size: 23px; font-weight: 800; }
+header.top .sub { font-size: 15px; opacity: .92; }
+.card {
+  background: #fff; border-radius: 14px; padding: 18px 18px;
+  margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.card h2 {
+  font-size: 19px; margin: 0 0 12px; color: #0b3d91;
+  border-left: 5px solid #f5a623; padding-left: 10px;
+}
+.chart-box { position: relative; height: 340px; width: 100%; }
+.chart-box.trend { height: 300px; }
+.note { font-size: 14px; color: #667; background: #eef1f6; border-radius: 10px; padding: 14px; text-align: center; }
+h3.sec {
+  font-size: 18px; color: #10233f; margin: 22px 0 8px;
+  padding-bottom: 6px; border-bottom: 2px solid #e3e7ee;
+}
+h3.sec .en { font-size: 13px; color: #8894a7; font-weight: 500; margin-left: 6px; }
+.exec p { margin: 10px 0; }
+.exec b.tag { color: #c0392b; }
+ul.watch { padding-left: 0; list-style: none; margin: 8px 0; }
+ul.watch li { padding: 8px 0 8px 14px; border-left: 3px solid #f5a623; margin-bottom: 8px; background: #fbfbfc; border-radius: 6px; }
+ul.watch li b { color: #0b3d91; }
+.pill { display:inline-block; background:#0b3d91; color:#fff; font-size:12px; padding:2px 9px; border-radius:20px; margin-right:6px; }
+.big { font-weight:800; color:#c0392b; }
+footer { text-align:center; font-size:13px; color:#8894a7; padding:14px 0 30px; }
+.legend-hint { font-size:13px; color:#667; margin-top:8px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="date">2026 / 07 / 15　星期三</div>
+  <h1>DIGITIMES 每日科技彙整</h1>
+  <div class="sub">當日新聞約 60 則　·　自動歸納 9 大主題　·　深度分析：記憶體 / HBM 超級循環</div>
+</header>
+
+<div class="card">
+  <h2>今日主題分布圖</h2>
+  <div class="chart-box"><canvas id="topicChart"></canvas></div>
+  <div class="legend-hint">紅色為當日最熱主題（則數最多），亦為本日深度分析對象</div>
+</div>
+
+<div class="card">
+  <h2>主題提及次數趨勢圖</h2>
+  <div class="chart-box trend" id="trendWrap"><canvas id="trendChart"></canvas></div>
+  <div class="note" id="trendNote" style="display:none;"></div>
+  <div class="legend-hint">趨勢資料存於本機瀏覽器，於同一裝置每日開啟即自動累積</div>
+</div>
+
+<div class="card">
+  <h2>深度分析：記憶體 / HBM 超級循環與 AI 排擠產能</h2>
+  <p style="margin-top:0;font-size:15px;color:#556;">
+    <span class="pill">涵蓋 12 則</span>綜合當日力積電法說、NVIDIA 大摩說明會、三星 HBM4、南韓記憶體代工論壇、車用記憶體等新聞整合分析。
+  </p>
+
+  <h3 class="sec">Executive Summary <span class="en">執行摘要</span></h3>
+  <div class="exec">
+    <p><b class="tag">①現象：</b>記憶體正從「被動供應的儲存空間」轉為 AI 運算的核心瓶頸與稀缺資源。大型雲端商（CSP）已提前預訂 DRAM 原廠未來數年產能，全球記憶體供需缺口確認延續至 2027 年；NVIDIA 坦言真正的限制已不是「AI 需求是否存在」，而是記憶體、電力、網路與資料中心空間等多重物理限制。供給端結構性短缺，需求端則由 AI 推論從雲端延伸至邊緣與終端持續放大。</p>
+    <p><b class="tag">②市場反應：</b>資本市場以「漲價」與「卡位」證實了短缺。力積電 7 月將 DRAM 投片價格結構性調升約 <span class="big">45%</span>、邏輯代工再漲 10~15%，第 3 季訂單出貨比（BBR）達 1.4 倍；NVIDIA 則以定價權吸收成本，單機櫃價格由 Blackwell 的 300~400 萬美元拉高到 Rubin 的 600~700 萬美元，毛利率仍守在 70% 區間。三星則以 HBM4「業界最高傳輸速度」力拚打進 NVIDIA 量產供應鏈。</p>
+    <p><b class="tag">③受益與受害分野：</b>受益者為握有產能與技術的記憶體與代工廠——SK 海力士（NVIDIA HBM4 主供應商）、美光、力積電（3D AI Foundry、矽電容、WoW），以及先進封裝、矽中介層與功率元件供應鏈。受害者則是被排擠產能的下游：智慧手機（PMIC 產能被 AI 伺服器排擠）、車用（車規記憶體遭 HBM 擠壓，車廠靠減配、選配轉嫁成本）、以及所有需與 AI 搶記憶體的消費電子，2027 年恐面臨「晶片通膨」帶動的終端漲價。</p>
+    <p><b class="tag">④潛在變數：</b>需持續觀察：一，記憶體供給若擴張速度超預期，資料中心成長可能放緩、漲價循環反轉；二，客戶加速自研 ASIC 與 AI 開發成本急降，可能削弱 NVIDIA 定價權；三，三星 HBM4 能否實際取得 NVIDIA 量產訂單（PO），將牽動供給版圖；四，7/16 台積電法說是驗證整條 AI 供應鏈景氣度的關鍵指標。</p>
+  </div>
+
+  <h3 class="sec">Industry Trend <span class="en">產業趨勢觀察</span></h3>
+  <p>記憶體產業正經歷商業模式的結構性轉變。南韓學界（成均館大學教授權錫俊於 Nano Korea 2026）指出，記憶體「單純大量生產、提高良率」的時代已結束，將進化為先接單、再依客戶需求設計的「記憶體晶圓代工（Memory Foundry）」模式。未來 HBM 基礎裸晶（base die）將走向三層架構：底層由記憶體廠掌握 I/O 與 IP、中層為多客戶共用的標準化演算法硬體（如 KV Cache 轉換、Google TurboQuant 類演算法）、外層則為客製化混合設計甚至導入 FPGA。此趨勢意味邏輯運算層與先進封裝的競爭力，將比記憶體顆粒本身更關鍵——這對同時擁有記憶體、晶圓代工、封裝三業務的三星形成結構性機會，也是 SK 海力士（需外求台積電代工邏輯裸晶）的長期課題。同時，AI 推論從雲端下沉至自駕、機器人、製造 AI 與手機端 AI 代理，帶動記憶體需求全面客製化。</p>
+
+  <h3 class="sec">Company Watch <span class="en">重點公司動態</span></h3>
+  <ul class="watch">
+    <li><b>力積電</b>：7 月 DRAM 投片價格結構性調升約 45%（11 月起反映營收）；邏輯代工調漲 10~15%，第 3 季 BBR 達 1.4 倍。3D AI Foundry 營收佔比由 Q1 3.2% 升至 Q2 5.4%，訂 3 年內拚 20%。12 吋矽電容已獲國際大廠 EMIB 平台認證，規劃 2027 下半月產能拉至 8,000~1 萬片。WoW 混合鍵合已可 4/8 層堆疊，8 層 DRAM 良率逾 90%。2026 資本支出 4.88 億美元（原 5.12 億小幅下修）。</li>
+    <li><b>NVIDIA</b>：季度營收逼近 1,000 億美元且成長加速。單機櫃 HBM 成本約 19 億美元，Blackwell→Rubin 單櫃 HBM 成本僅增 20~30 萬美元，但定價由 300~400 萬拉高至 600~700 萬美元，毛利率守 70%。本會計年度 CPU 業務目標約 200 億美元（近半來自獨立 CPU 機櫃）。將以「降低部分機櫃記憶體配置＋強化網路＋優化調度」因應記憶體短缺。</li>
+    <li><b>三星電子</b>：迄今自 NVIDIA 取得的 HBM 營收僅來自付費樣品、尚無量產 PO。HBM4 主打 11.7Gbps（最高 13Gbps）業界最高傳輸速度，採第六代 1c DRAM＋4 奈米 base die，力拚自 HBM4 打進 NVIDIA 供應鏈。</li>
+    <li><b>SK 海力士</b>：與 NVIDIA 建立長期技術合作，Vera Rubin HBM4 供貨初估佔約 60%（三星 30%、美光 10%），維持主要供應商地位。</li>
+    <li><b>美光（Micron）</b>：最新財報亮眼、釋出記憶體短缺訊號；CEO Mehrotra 指 L4 自駕車 DRAM 需求未來上看 300GB。</li>
+  </ul>
+
+  <h3 class="sec">Supply Chain Impact <span class="en">供應鏈影響</span></h3>
+  <p>記憶體與先進封裝的產能磁吸效應正沿供應鏈外溢。上游：CSP 提前鎖定 DRAM 原廠產能，台積電 CoWoS 供不應求、訂單外溢，力積電承接 CoWoS-S／L 後段並回移新竹廠爬坡。中游：AI 伺服器對 PMIC、MOSFET、功率元件需求急增，甚至排擠手機用 PMIC 產能，PMIC 與被動元件廠已陸續宣布下半年漲價。下游最受衝擊的是車用——高階智慧車 DRAM 需求約 60~100GB（Tesla AI 4+ 平台 64GB、賓士 MBUX 24GB），NAND 普遍 400GB~1.5TB，L4 級 DRAM 上看 300GB，但車規記憶體正被 HBM 擠壓，部分中國車廠已透過減少贈送配備、改採選配把成本轉嫁消費者。SLC/NOR Flash 亦因 AI 邊緣化與地緣供應鏈多元化走升，力積電非中 NOR Flash 投片已逾 1,000 片。</p>
+
+  <h3 class="sec">Market Opportunity <span class="en">市場機會</span></h3>
+  <p>一，先進封裝與被動整合：矽電容（Silicon Capacitor）、矽中介層（Interposer）、Wafer-on-Wafer（WoW）與混合鍵合，是 AI 高功耗、高運算密度下的高成長切點，力積電已鎖定並取得 EMIB 認證。二，記憶體代工新模式：base die 邏輯層、標準化演算法硬體化，為擁有邏輯＋封裝整合能力者（三星、台積電生態）創造新價值池。三，成熟製程漲價紅利：DRAM 投片、8/12 吋邏輯代工、PMIC／功率元件全面供不應求，提供二線晶圓代工 ASP 與晶圓價值提升空間（力積電 1P 製程每片晶圓價值上看 2.5 倍）。四，非中國供應地位：地緣政治驅動供應鏈多元化，台廠在非中 NOR Flash、OSAT 非中產能取得特殊卡位。</p>
+
+  <h3 class="sec">Risk Analysis <span class="en">風險分析</span></h3>
+  <p>最大風險是漲價循環的自我反轉：若記憶體供給擴張快於預期，資料中心成長恐大幅放緩，當前的缺貨與漲價敘事可能快速修正。其次為需求結構風險——客戶加速部署 ASIC、AI 開發成本急劇下降、或出現更具革命性的競品，都可能侵蝕 NVIDIA 與整條 AI 供應鏈的定價權。第三為終端買氣風險：晶片通膨若延續至 2027 年推升手機與消費電子售價，可能壓抑本已疲弱的換機需求（2026 Android 手機出貨已下修），形成「漲價救毛利、卻傷量能」的兩難。第四為個別公司執行風險：三星 HBM4 量產 PO 尚未落地、力積電 1P/PWF 與印度廠等新專案投產時程（多落在 2027~2028）仍具不確定性。</p>
+
+  <h3 class="sec">My Opinion <span class="en">1-3 個月展望</span></h3>
+  <p>未來 1~3 個月，記憶體超級循環的敘事仍將主導 AI 供應鏈評價，建議緊盯以下領先指標：<b>（1）7/16 台積電法說</b>——AI 資本支出展望與 CoWoS 產能指引，是驗證整條供應鏈景氣度最直接的訊號；若與 NVIDIA「供不應求」訊息呼應，將強化循環延續的判斷。<b>（2）記憶體現貨與合約價（DRAM/NAND、HBM）走勢</b>——連續上行代表短缺尚未緩解；一旦漲勢趨緩或原廠釋出擴產訊號，即為循環見頂的早期警訊。<b>（3）三星 HBM4 是否取得 NVIDIA 正式 PO</b>——落地將改變供給版圖並壓抑漲價，未落地則 SK 海力士續強。<b>（4）PMIC／被動元件後續調價與手機出貨修正幅度</b>——反映「晶片通膨」向終端傳導的力道與買氣承受度。基準判斷：短缺與漲價在此區間仍是主旋律，握有產能與先進封裝能力的廠商（記憶體三雄、CoWoS 與被動整合供應鏈、二線成熟製程）相對受惠；但需對「供給超預期擴張＋終端買氣走弱」的反轉風險保持警覺，此為由多轉空最可能的觸發點。</p>
+</div>
+
+<footer>
+  資料來源：DIGITIMES 電子時報（會員內容）　·　本報告由自動化排程彙整產生，僅供內部參考，不構成投資建議。
+</footer>
+
+</div>
+
+<script>
+// ===== 當日統計資料 =====
+var todayEntry = {
+  date: "2026-07-15",
+  totalArticles: 60,
+  topics: [
+    { name: "記憶體/HBM超級循環與AI排擠產能", count: 12 },
+    { name: "AI戰略、算力與應用布局", count: 9 },
+    { name: "航太衛星與無人機軍工", count: 6 },
+    { name: "智慧手機與穿戴裝置", count: 6 },
+    { name: "先進封裝、基板與材料供應鏈", count: 5 },
+    { name: "雲端資料中心與電力能源", count: 5 },
+    { name: "車用科技與電動車", count: 4 },
+    { name: "面板OLED顯示", count: 3 },
+    { name: "東南亞/去中化供應鏈重組", count: 3 }
+  ]
+};
+
+// ===== 主題分布圖（水平長條）=====
+(function(){
+  var labels = todayEntry.topics.map(function(t){ return t.name; });
+  var data = todayEntry.topics.map(function(t){ return t.count; });
+  var maxCount = Math.max.apply(null, data);
+  var colors = data.map(function(v){ return v === maxCount ? "#c0392b" : "#1666c9"; });
+  new Chart(document.getElementById("topicChart"), {
+    type: "bar",
+    data: { labels: labels, datasets: [{ label: "則數", data: data, backgroundColor: colors, borderRadius: 5 }] },
+    options: {
+      indexAxis: "y", responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: function(c){ return c.parsed.x + " 則"; } } } },
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 2, font: { size: 12 } }, grid: { color: "#eef1f6" } },
+        y: { ticks: { font: { size: 12 } }, grid: { display: false } }
+      }
+    }
+  });
+})();
+
+// ===== 趨勢圖（跨日累積，localStorage）=====
+(function(){
+  var KEY = "digitimes_topic_history";
+  var history = [];
+  try { history = JSON.parse(localStorage.getItem(KEY)) || []; } catch(e){ history = []; }
+  // upsert today by date
+  history = history.filter(function(e){ return e.date !== todayEntry.date; });
+  history.push(todayEntry);
+  history.sort(function(a,b){ return a.date < b.date ? -1 : 1; });
+  try { localStorage.setItem(KEY, JSON.stringify(history)); } catch(e){}
+
+  var wrap = document.getElementById("trendWrap");
+  var note = document.getElementById("trendNote");
+
+  if (history.length < 2) {
+    wrap.style.display = "none";
+    note.style.display = "block";
+    note.textContent = "目前僅累積 " + history.length + " 天資料，明天起會自動累積。";
+    return;
+  }
+
+  // 取最新一天則數最多的前5主題
+  var latest = history[history.length - 1];
+  var top5 = latest.topics.slice().sort(function(a,b){ return b.count - a.count; }).slice(0,5).map(function(t){ return t.name; });
+  var dates = history.map(function(e){ return e.date.slice(5); }); // MM-DD
+  var palette = ["#c0392b","#1666c9","#f5a623","#2e8b57","#8e44ad"];
+
+  var datasets = top5.map(function(name, i){
+    var series = history.map(function(e){
+      var found = e.topics.find(function(t){ return t.name === name; });
+      return found ? found.count : 0;
+    });
+    return { label: name, data: series, borderColor: palette[i], backgroundColor: palette[i], tension: 0.3, fill: false, pointRadius: 3 };
+  });
+
+  new Chart(document.getElementById("trendChart"), {
+    type: "line",
+    data: { labels: dates, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom", labels: { font: { size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { grid: { color: "#eef1f6" }, ticks: { font: { size: 12 } } },
+        y: { beginAtZero: true, ticks: { stepSize: 2, font: { size: 12 } }, grid: { color: "#eef1f6" } }
+      }
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
