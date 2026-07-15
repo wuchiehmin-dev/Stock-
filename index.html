@@ -278,7 +278,7 @@
     // 真實資料：data.json 的 themes（日=當日、週/月=history 累積複利）
     if(window.LIVE_TW && window.LIVE_TW.themes){
       return window.LIVE_TW.themes.map(function(t){
-        return {n:t.name,d:t.chg.d,w:t.chg.w,m:t.chg.m,
+        return {id:t.id,n:t.name,d:t.chg.d,w:t.chg.w,m:t.chg.m,
           vol:{d:t.vol.d,w:t.vol.w,m:t.vol.m}};
       });
     }
@@ -286,7 +286,7 @@
       var tw=0,tc=0,vol=0;
       t.s.forEach(function(st){var chg=mChg(st[0]),w=mWeight(st[0]);tw+=w;tc+=w*chg;vol+=w;});
       var chg=tw?Math.round(tc/tw*100)/100:0;
-      return {n:t.name,d:chg,w:Math.round(chg*1.4*10)/10,m:Math.round(chg*3.2*10)/10,
+      return {id:t.id,n:t.name,d:chg,w:Math.round(chg*1.4*10)/10,m:Math.round(chg*3.2*10)/10,
         vol:{d:vol,w:vol*5,m:vol*21}};
     });
   }
@@ -310,7 +310,7 @@
       t.s.forEach(function(st){var c=mChg(st[0]),w=mWeight(st[0]);tw+=w;tc+=w*c;});
       chg=tw?Math.round(tc/tw*100)/100:0;
     }
-    return {role:t.name,chg:chg,grp:t.group,cos:t.s.map(function(st){return [st[1],"tw",stockChg(st[0])];})};
+    return {role:t.name,key:t.id,chg:chg,grp:t.group,cos:t.s.map(function(st){return [st[1],"tw",stockChg(st[0])];})};
   }
   // 主檔→供應鏈（按tier三欄，全部主題+供貨連線；主題與成分股帶當日漲跌）
   function masterToChain(){
@@ -319,9 +319,9 @@
     return {up:byTier.up,mid:byTier.mid,down:byTier.down};
   }
   // 主檔→單一主題聚焦視圖：用 to 供貨關係反查一階上游／取一階下游，避免整個台股主檔太多主題
-  function masterToChainFocused(name){
+  function masterToChainFocused(id){
     var t0=null;
-    MASTER_TW.forEach(function(t){if(t.name===name)t0=t;});
+    MASTER_TW.forEach(function(t){if(t.id===id)t0=t;});
     if(!t0)return null;
     var tm=themeChgMap();
     var up=MASTER_TW.filter(function(t){return t.to.indexOf(t0.id)>=0;}).map(function(t){return themeNode(t,tm);});
@@ -349,20 +349,10 @@
     links.forEach(function(l){nm[l.source].deg++;nm[l.target].deg++;});
     return {nodes:Object.keys(nm).map(function(k){return nm[k];}),links:links};
   }
-  // 公司名單→重疊最多（≥2 檔）的主題名（供應鏈節點反向配對資金流向列用）
-  window.masterThemeMatch=function(cosNames){
-    var best=1,bn=null;
-    MASTER_TW.forEach(function(t){
-      var ov=0;
-      t.s.forEach(function(st){if(cosNames.indexOf(st[1])>=0)ov++;});
-      if(ov>best){best=ov;bn=t.name;}
-    });
-    return bn;
-  };
-  // 主題名→成分股名清單（供應鏈自動配對「最相關主題」用）
-  window.masterThemeStocks=function(name){
+  // 主題id→顯示名稱（跨區導航一律用id，顯示時才轉名稱）
+  window.masterThemeName=function(id){
     for(var i=0;i<MASTER_TW.length;i++){
-      if(MASTER_TW[i].name===name) return MASTER_TW[i].s.map(function(st){return st[1];});
+      if(MASTER_TW[i].id===id) return MASTER_TW[i].name;
     }
     return null;
   };
@@ -527,17 +517,17 @@
   function mfRowEl(r,rank,up,down,momMax,volMax,sub){
     var pos=r.chg>=0,c=pos?up:down;
     var mpos=r.mom>=0,mc=mpos?up:down,mpct=Math.abs(r.mom)/momMax*100;
-    var row=document.createElement("div");row.className="mf-row";row.dataset.tname=r.n;
+    var row=document.createElement("div");row.className="mf-row";row.dataset.tid=r.id||"";
     var nameHtml=(sub?"<span class='mf-sub'>"+sub+"</span>":"")+r.n;
     row.innerHTML="<span class='mf-rank'>"+(rank||"")+"</span>"+
       "<span class='mf-name'>"+nameHtml+"</span>"+
       "<div class='mf-mom' style='justify-content:"+(mpos?"flex-start":"flex-end")+";'><i style='width:"+mpct+"%;background:"+mc+";'></i><span class='mf-momval'>"+(mpos?"+":"")+r.mom+"</span></div>"+
       "<div class='mf-chg' style='color:"+c+";'>"+(pos?"+":"")+r.chg.toFixed(1)+"%</div>"+
       "<div class='mf-vol'><i style='width:"+Math.max(4,r.vol/volMax*100)+"%;'></i><span>"+fmtVol(r.vol)+"</span></div>";
-    if(cur==="TW"){
+    if(cur==="TW"&&r.id){
       row.style.cursor="pointer";
       row.title="點擊查看此主題在供應鏈上中下游的位置";
-      row.onclick=function(){if(window.highlightChainTheme)window.highlightChainTheme(r.n);};
+      row.onclick=function(){if(window.highlightChainTheme)window.highlightChainTheme(r.id);};
     }
     return row;
   }
@@ -547,7 +537,7 @@
     var mf=cur==="TW"?window.masterToFlow():(MFLOW[cur]?MFLOW[cur].themes:[]);
     document.getElementById("mfHdr").innerHTML=
       "<span>#</span><span>產業主題</span><span>量價動能</span><span class='r'>漲跌幅</span><span class='r'>成交量</span>";
-    var rows=mf.map(function(t){return {n:t.n,chg:t[curMfPer],vol:t.vol[curMfPer],
+    var rows=mf.map(function(t){return {id:t.id,n:t.n,chg:t[curMfPer],vol:t.vol[curMfPer],
       mom:+((t.vol[curMfPer]/100)*t[curMfPer]).toFixed(1)};});
     var momMax=Math.max.apply(null,rows.map(function(r){return Math.abs(r.mom);}))||1;
     var volMax=Math.max.apply(null,rows.map(function(r){return r.vol;}))||1;
@@ -636,9 +626,9 @@
 
   syncCtry();syncMfPer();syncMfDim();render();
 
-  // 供應鏈節點反向點回來：捲動並高亮資金流向對應主題列
-  window.highlightFlowTheme=function(name){
-    var el=document.querySelector("#flowlist .mf-row[data-tname='"+String(name).replace(/'/g,"\\'")+"']");
+  // 供應鏈節點反向點回來：用主題id捲動並高亮資金流向對應主題列
+  window.highlightFlowTheme=function(id){
+    var el=document.querySelector("#flowlist .mf-row[data-tid='"+String(id).replace(/'/g,"\\'")+"']");
     if(!el)return;
     el.scrollIntoView({behavior:"smooth",block:"center"});
     el.classList.add("hl");
@@ -697,26 +687,26 @@
     ai:{label:"AI 算力",
       demand:{label:"需求端 · 雲端資本支出",cos:[["微軟","us"],["Google","us"],["Amazon","us"],["Meta","us"]]},
       up:[{role:"半導體設備",cos:[["ASML","x"],["東京威力","jp"],["Advantest","jp"],["DISCO","jp"]]},
-          {role:"矽晶圓/材料",cos:[["信越","jp"],["SUMCO","jp"],["環球晶","tw"],["味之素ABF","jp"]]},
-          {role:"IP/EDA",cos:[["Arm","x"],["Synopsys","us"],["Cadence","us"]]}],
-      mid:[{role:"晶圓代工",cos:[["台積電","tw"],["聯電","tw"],["Samsung","kr"]]},
-          {role:"CoWoS先進封裝",cos:[["台積電","tw"],["日月光","tw"],["京元電","tw"]]},
-          {role:"HBM記憶體",cos:[["SK海力士","kr"],["Samsung","kr"],["Micron","us"]]},
-          {role:"CPO/光通訊",cos:[["台積電","tw"],["聯亞","tw"],["波若威","tw"],["上詮","tw"]]}],
+          {role:"矽晶圓/材料",mid:"wafer",cos:[["信越","jp"],["SUMCO","jp"],["環球晶","tw"],["味之素ABF","jp"]]},
+          {role:"IP/EDA",mid:"ip",cos:[["Arm","x"],["Synopsys","us"],["Cadence","us"]]}],
+      mid:[{role:"晶圓代工",mid:"foundry",cos:[["台積電","tw"],["聯電","tw"],["Samsung","kr"]]},
+          {role:"CoWoS先進封裝",mid:"cowos",cos:[["台積電","tw"],["日月光","tw"],["京元電","tw"]]},
+          {role:"HBM記憶體",mid:"memory",cos:[["SK海力士","kr"],["Samsung","kr"],["Micron","us"]]},
+          {role:"CPO/光通訊",mid:"cpo_pkg",cos:[["台積電","tw"],["聯亞","tw"],["波若威","tw"],["上詮","tw"]]}],
       down:[{role:"GPU/加速器",cos:[["NVIDIA","us"],["AMD","us"],["博通","us"]]},
-          {role:"伺服器組裝",cos:[["廣達","tw"],["緯穎","tw"],["鴻海","tw"],["緯創","tw"]]},
-          {role:"散熱/電源",cos:[["奇鋐","tw"],["雙鴻","tw"],["台達電","tw"]]}],
+          {role:"伺服器組裝",mid:"ai_server",cos:[["廣達","tw"],["緯穎","tw"],["鴻海","tw"],["緯創","tw"]]},
+          {role:"散熱/電源",mid:"cooling",cos:[["奇鋐","tw"],["雙鴻","tw"],["台達電","tw"]]}],
       enable:[{role:"EDA/IP 工具",cos:[["Synopsys","us"],["Cadence","us"],["Arm","x"]]},
           {role:"AI 框架軟體",cos:[["CUDA","us"],["PyTorch","us"]]},
           {role:"先進封裝材料",cos:[["味之素ABF","jp"],["Resonac","jp"]]}]},
     cxl:{label:"CXL 記憶體互連",
       demand:{label:"需求端 · 雲端資本支出（記憶體佔比 2024約8%→2026約30%）",cos:[["Microsoft","us"],["Amazon","us"],["Google","us"],["Meta","us"]]},
-      up:[{role:"IP 矽智財",stage:"now",cos:[["Synopsys","us"],["Cadence","us"],["創意GUC","tw"],["M31","tw"]]},
+      up:[{role:"IP 矽智財",mid:"ip",stage:"now",cos:[["Synopsys","us"],["Cadence","us"],["創意GUC","tw"],["M31","tw"]]},
           {role:"DRAM 顆粒原廠",stage:"now",cos:[["SK海力士","kr"],["三星","kr"],["美光","us"]]}],
       mid:[{role:"控制晶片（咽喉）",stage:"now",cos:[["瀾起Montage","cn"],["Astera Labs","us"],["Marvell","us"],["Microchip","us"]]},
           {role:"CXL 記憶體模組",stage:"now",cos:[["SK海力士","kr"],["三星","kr"],["美光","us"]]}],
       down:[{role:"池化/交換器",stage:"soon",cos:[["XConn","us"],["瀾起","cn"]]},
-          {role:"伺服器整機",stage:"soon",cos:[["廣達","tw"],["緯穎","tw"],["Dell","us"]]},
+          {role:"伺服器整機",mid:"ai_server",stage:"soon",cos:[["廣達","tw"],["緯穎","tw"],["Dell","us"]]},
           {role:"雲端客戶（終端）",stage:"now",cos:[["Microsoft","us"],["Meta","us"]]}],
       enable:[{role:"軟體/OS 支援",cos:[["Linux核心","x"],["Windows Server 2025","us"]]},
           {role:"光互連(fabric)",stage:"later",cos:[["Broadcom","us"],["聯亞","tw"],["上詮","tw"]]}]},
@@ -727,35 +717,35 @@
           {role:"功率半導體",cos:[["英飛凌","x"],["安森美","us"],["羅姆","jp"]]}],
       mid:[{role:"電池芯/模組",cos:[["寧德時代","cn"],["LG新能源","kr"],["Panasonic","jp"]]},
           {role:"驅動馬達",cos:[["富田","tw"],["和大","tw"],["日本電產","jp"]]},
-          {role:"三電/車電零組件",cos:[["台達電","tw"],["貿聯","tw"],["和碩","tw"]]}],
+          {role:"三電/車電零組件",mid:"auto_electronics",cos:[["台達電","tw"],["貿聯","tw"],["和碩","tw"]]}],
       down:[{role:"整車製造",cos:[["Tesla","us"],["BYD","cn"],["鴻海MIH","tw"]]},
           {role:"充電樁/基建",cos:[["起而行","tw"],["台達電","tw"],["ChargePoint","us"]]},
-          {role:"車用面板/座艙",cos:[["友達","tw"],["群創","tw"],["聯發科","tw"]]}],
+          {role:"車用面板/座艙",mid:"panel",cos:[["友達","tw"],["群創","tw"],["聯發科","tw"]]}],
       enable:[{role:"電池管理BMS",cos:[["台達電","tw"],["致茂","tw"]]},
           {role:"車用OS/軟體",cos:[["QNX","x"],["Android Auto","us"]]},
           {role:"充電標準/介面",cos:[["CCS","x"],["NACS","us"]]}]},
     space:{label:"低軌衛星/太空",
       demand:{label:"需求端 · 衛星營運商",cos:[["Starlink","us"],["Amazon Leo","us"],["OneWeb","x"],["Telesat","x"]]},
-      up:[{role:"高頻元件GaAs/GaN",stage:"now",cos:[["穩懋","tw"],["全訊","tw"],["同欣電","tw"]]},
+      up:[{role:"高頻元件GaAs/GaN",mid:"epitaxy",stage:"now",cos:[["穩懋","tw"],["全訊","tw"],["同欣電","tw"]]},
           {role:"高頻材料/PCB",stage:"now",cos:[["台光電","tw"],["華通","tw"],["燿華","tw"]]},
           {role:"射頻晶片",cos:[["Qorvo","us"],["ADI","us"],["STMicro","x"]]}],
       mid:[{role:"發射服務",stage:"now",cos:[["SpaceX","us"],["Rocket Lab","us"],["Arianespace","x"]]},
           {role:"衛星本體/封裝",stage:"soon",cos:[["群創FOPLP","tw"],["同欣電","tw"],["Lockheed","us"]]},
-          {role:"通訊模組",stage:"soon",cos:[["昇達科","tw"],["萊德光電","tw"]]}],
-      down:[{role:"地面站/終端設備",stage:"now",cos:[["啟碁","tw"],["台揚","tw"],["正文","tw"],["信錦","tw"]]},
+          {role:"通訊模組",mid:"satellite",stage:"soon",cos:[["昇達科","tw"],["萊德光電","tw"]]}],
+      down:[{role:"地面站/終端設備",mid:"satellite",stage:"now",cos:[["啟碁","tw"],["台揚","tw"],["正文","tw"],["信錦","tw"]]},
           {role:"衛星服務/落地",cos:[["Starlink","us"],["中華電信","tw"],["遠傳","tw"]]}],
       enable:[{role:"地面測控軟體",cos:[["凌群","tw"],["新鼎","tw"]]},
           {role:"太空級認證/測試",cos:[["耀登","tw"],["台灣檢驗","tw"]]},
           {role:"雷射星間鏈路",stage:"soon",cos:[["Mynaric","x"],["Sony Space","jp"]]}]},
     phone:{label:"智慧手機",
       demand:{label:"需求端 · 品牌與消費者",cos:[["Apple","us"],["Samsung","kr"],["小米","cn"]]},
-      up:[{role:"晶圓代工",cos:[["台積電","tw"],["Samsung","kr"]]},
+      up:[{role:"晶圓代工",mid:"foundry",cos:[["台積電","tw"],["Samsung","kr"]]},
           {role:"面板OLED",cos:[["三星顯示","kr"],["LG Display","kr"],["京東方","cn"]]},
-          {role:"記憶體",cos:[["SK海力士","kr"],["三星","kr"],["美光","us"]]}],
-      mid:[{role:"處理器SoC",cos:[["聯發科","tw"],["高通","us"],["Apple自研","us"]]},
-          {role:"鏡頭/光學",cos:[["大立光","tw"],["玉晶光","tw"],["舜宇","cn"]]},
-          {role:"被動元件/PCB",cos:[["國巨","tw"],["臻鼎","tw"],["村田","jp"]]}],
-      down:[{role:"組裝代工EMS",cos:[["鴻海","tw"],["和碩","tw"],["立訊","cn"]]},
+          {role:"記憶體",mid:"memory",cos:[["SK海力士","kr"],["三星","kr"],["美光","us"]]}],
+      mid:[{role:"處理器SoC",mid:"ic_design",cos:[["聯發科","tw"],["高通","us"],["Apple自研","us"]]},
+          {role:"鏡頭/光學",mid:"apple_optics_lens",cos:[["大立光","tw"],["玉晶光","tw"],["舜宇","cn"]]},
+          {role:"被動元件/PCB",mid:"passive",cos:[["國巨","tw"],["臻鼎","tw"],["村田","jp"]]}],
+      down:[{role:"組裝代工EMS",mid:"apple_optics",cos:[["鴻海","tw"],["和碩","tw"],["立訊","cn"]]},
           {role:"品牌",cos:[["Apple","us"],["Samsung","kr"],["小米","cn"]]}],
       enable:[{role:"行動OS",cos:[["iOS","us"],["Android","us"]]},
           {role:"通訊基頻5G/6G",cos:[["高通","us"],["聯發科","tw"]]},
@@ -763,12 +753,12 @@
     pc:{label:"電腦/筆電",
       demand:{label:"需求端 · 品牌與企業採購",cos:[["HP","us"],["Dell","us"],["Lenovo","cn"],["Apple","us"]]},
       up:[{role:"CPU/GPU",cos:[["Intel","us"],["AMD","us"],["NVIDIA","us"]]},
-          {role:"晶圓代工",cos:[["台積電","tw"],["Intel","us"]]},
-          {role:"面板/記憶體",cos:[["友達","tw"],["群創","tw"],["SK海力士","kr"]]}],
-      mid:[{role:"主機板/顯卡",cos:[["華碩","tw"],["技嘉","tw"],["微星","tw"]]},
-          {role:"機殼/散熱/電源",cos:[["奇鋐","tw"],["台達電","tw"],["光寶科","tw"]]},
-          {role:"連接器/PCB",cos:[["嘉澤","tw"],["健鼎","tw"],["金像電","tw"]]}],
-      down:[{role:"ODM組裝",cos:[["廣達","tw"],["仁寶","tw"],["緯創","tw"],["英業達","tw"]]},
+          {role:"晶圓代工",mid:"foundry",cos:[["台積電","tw"],["Intel","us"]]},
+          {role:"面板/記憶體",mid:"panel",cos:[["友達","tw"],["群創","tw"],["SK海力士","kr"]]}],
+      mid:[{role:"主機板/顯卡",mid:"pc_brand",cos:[["華碩","tw"],["技嘉","tw"],["微星","tw"]]},
+          {role:"機殼/散熱/電源",mid:"chassis",cos:[["奇鋐","tw"],["台達電","tw"],["光寶科","tw"]]},
+          {role:"連接器/PCB",mid:"connector",cos:[["嘉澤","tw"],["健鼎","tw"],["金像電","tw"]]}],
+      down:[{role:"ODM組裝",mid:"ai_server",cos:[["廣達","tw"],["仁寶","tw"],["緯創","tw"],["英業達","tw"]]},
           {role:"品牌",cos:[["HP","us"],["Dell","us"],["Lenovo","cn"],["Acer","tw"],["Asus","tw"]]}],
       enable:[{role:"作業系統",cos:[["Windows","us"],["macOS","us"]]},
           {role:"BIOS/韌體",cos:[["AMI","us"],["Insyde","tw"]]},
@@ -776,7 +766,7 @@
     solar:{label:"太陽能",
       demand:{label:"需求端 · 系統開發與電廠",cos:[["台電","tw"],["雲豹能源","tw"],["NextEra","us"]]},
       up:[{role:"多晶矽料",cos:[["Wacker","x"],["OCI","kr"],["保利協鑫","cn"]]},
-          {role:"矽晶圓/晶錠",cos:[["中美晶","tw"],["合晶","tw"],["隆基","cn"]]},
+          {role:"矽晶圓/晶錠",mid:"wafer",cos:[["中美晶","tw"],["合晶","tw"],["隆基","cn"]]},
           {role:"耗材漿料/切割線",cos:[["碩禾","tw"],["達邁","tw"]]}],
       mid:[{role:"太陽能電池片",cos:[["元晶","tw"],["茂迪","tw"],["通威","cn"]]},
           {role:"模組",cos:[["聯合再生","tw"],["元晶","tw"],["First Solar","us"]]},
@@ -788,12 +778,12 @@
           {role:"EPC工程管理",cos:[["雲豹能源","tw"],["永鑫","tw"]]}]},
     wind:{label:"離岸風電",
       demand:{label:"需求端 · 開發商與電網",cos:[["沃旭","x"],["RWE","x"],["台電","tw"]]},
-      up:[{role:"鋼材/樹脂原料",cos:[["中鋼","tw"],["上緯","tw"],["浦項鋼鐵","kr"]]},
+      up:[{role:"鋼材/樹脂原料",mid:"steel",cos:[["中鋼","tw"],["上緯","tw"],["浦項鋼鐵","kr"]]},
           {role:"葉片/齒輪箱",cos:[["天力","tw"],["台朔重工","tw"],["ZF","x"]]},
-          {role:"電力設施",cos:[["華城","tw"],["士電","tw"],["中興電工","tw"]]}],
+          {role:"電力設施",mid:"heavy_electric",cos:[["華城","tw"],["士電","tw"],["中興電工","tw"]]}],
       mid:[{role:"風機系統整機",cos:[["Vestas","x"],["Siemens Gamesa","x"],["GE Vernova","us"]]},
           {role:"水下基礎",cos:[["世紀風電","tw"],["興達海基","tw"]]},
-          {role:"海纜/塔架",cos:[["華新麗華","tw"],["中鋼機械","tw"]]}],
+          {role:"海纜/塔架",mid:"cable",cos:[["華新麗華","tw"],["中鋼機械","tw"]]}],
       down:[{role:"海事工程/安裝",cos:[["台船環海","tw"],["伯威海事","tw"]]},
           {role:"風場營運/IPP",cos:[["沃旭","x"],["台電","tw"],["風睿能源","tw"]]}],
       enable:[{role:"海事工程船隊",cos:[["台船環海","tw"],["伯威海事","tw"]]},
@@ -802,10 +792,10 @@
     vr:{label:"VR/AR",
       demand:{label:"需求端 · 品牌與消費者",cos:[["Meta","us"],["Apple","us"],["Samsung","kr"]]},
       up:[{role:"Micro-OLED面板",stage:"soon",cos:[["Sony","jp"],["視涯","cn"],["京東方","cn"]]},
-          {role:"光學鏡片/波導",stage:"now",cos:[["大立光","tw"],["玉晶光","tw"],["揚明光","tw"]]},
+          {role:"光學鏡片/波導",mid:"apple_optics_lens",stage:"now",cos:[["大立光","tw"],["玉晶光","tw"],["揚明光","tw"]]},
           {role:"CMOS Si晶圓代工",stage:"now",cos:[["台積電","tw"]]}],
       mid:[{role:"感測/眼球追蹤IC",cos:[["原相","tw"],["奇景","tw"],["Sony","jp"]]},
-          {role:"XR平台SoC",cos:[["高通","us"],["聯發科","tw"]]},
+          {role:"XR平台SoC",mid:"ic_design",cos:[["高通","us"],["聯發科","tw"]]},
           {role:"光學模組組裝",cos:[["舜宇","cn"],["歌爾","cn"],["佳世達","tw"]]}],
       down:[{role:"整機組裝",stage:"now",cos:[["立訊","cn"],["廣達","tw"],["和碩","tw"]]},
           {role:"品牌",cos:[["Meta","us"],["Apple","us"],["Samsung","kr"],["PICO","cn"]]}],
@@ -814,33 +804,33 @@
           {role:"光學檢測",cos:[["致茂","tw"],["由田","tw"]]}]},
     robot:{label:"機器人/人形機器人",
       demand:{label:"需求端 · 車廠與品牌導入",cos:[["Tesla","us"],["Figure AI","us"],["現代/Boston Dynamics","kr"],["小鵬","cn"]]},
-      up:[{role:"減速器/滾珠螺桿",stage:"now",cos:[["上銀","tw"],["直得","tw"],["Harmonic Drive","jp"],["綠的諧波","cn"]]},
+      up:[{role:"減速器/滾珠螺桿",mid:"robot_parts",stage:"now",cos:[["上銀","tw"],["直得","tw"],["Harmonic Drive","jp"],["綠的諧波","cn"]]},
           {role:"力矩感測/伺服馬達",cos:[["台達電","tw"],["日本電產","jp"],["安川電機","jp"]]},
           {role:"微型馬達/驅動IC",cos:[["大銀微","tw"],["亞德客-KY","tw"],["Maxon","x"]]}],
       mid:[{role:"整機系統",stage:"soon",cos:[["Tesla Optimus","us"],["Figure AI","us"],["Boston Dynamics","kr"],["優必選","cn"]]},
-          {role:"靈巧手/感測",cos:[["所羅門","tw"],["達明機器人","tw"],["Sensata","us"]]},
+          {role:"靈巧手/感測",mid:"robot",cos:[["所羅門","tw"],["達明機器人","tw"],["Sensata","us"]]},
           {role:"AI晶片/控制",cos:[["NVIDIA Jetson","us"],["高通","us"]]}],
       down:[{role:"製造產線導入",cos:[["鴻海","tw"],["BMW","x"],["Amazon倉儲","us"]]},
-          {role:"系統整合/代工",cos:[["廣達","tw"],["鴻海","tw"]]}],
+          {role:"系統整合/代工",mid:"robot",cos:[["廣達","tw"],["鴻海","tw"]]}],
       enable:[{role:"AI模仿學習框架",stage:"soon",cos:[["NVIDIA Isaac","us"],["Google DeepMind","us"]]},
           {role:"感測器融合軟體",cos:[["Sensata","us"]]}]},
     hbm:{label:"記憶體/HBM",
       demand:{label:"需求端 · AI伺服器與雲端資本支出",cos:[["Microsoft","us"],["Google","us"],["Meta","us"],["Amazon","us"]]},
-      up:[{role:"矽晶圓",cos:[["環球晶","tw"],["SUMCO","jp"],["信越","jp"]]},
-          {role:"TSV/先進封裝設備",cos:[["東京威力","jp"],["弘塑","tw"],["家登","tw"]]}],
+      up:[{role:"矽晶圓",mid:"wafer",cos:[["環球晶","tw"],["SUMCO","jp"],["信越","jp"]]},
+          {role:"TSV/先進封裝設備",mid:"semi_equip",cos:[["東京威力","jp"],["弘塑","tw"],["家登","tw"]]}],
       mid:[{role:"DRAM顆粒原廠",stage:"now",cos:[["SK海力士","kr"],["三星電子","kr"],["Micron","us"]]},
           {role:"HBM堆疊封測",stage:"now",cos:[["SK海力士","kr"],["三星電子","kr"],["台積電","tw"]]},
-          {role:"模組/通路",cos:[["群聯","tw"],["十銓","tw"],["威剛","tw"]]}],
+          {role:"模組/通路",mid:"memory",cos:[["群聯","tw"],["十銓","tw"],["威剛","tw"]]}],
       down:[{role:"AI加速器/GPU",cos:[["NVIDIA","us"],["AMD","us"],["Google TPU","us"]]},
-          {role:"伺服器整機",cos:[["廣達","tw"],["緯穎","tw"],["鴻海","tw"]]}],
+          {role:"伺服器整機",mid:"ai_server",cos:[["廣達","tw"],["緯穎","tw"],["鴻海","tw"]]}],
       enable:[{role:"記憶體控制IC",cos:[["祥碩","tw"],["群聯","tw"]]},
           {role:"先進封裝材料",cos:[["味之素ABF","jp"]]}]},
     semi_local:{label:"半導體本土化/去美化",
       demand:{label:"需求端 · 地緣政治驅動的供應鏈重組",cos:[["美國CHIPS法案","us"],["中國國產替代政策","cn"],["台灣出口管制","tw"]]},
       up:[{role:"設備國產化(中)",stage:"now",cos:[["中微公司","cn"],["北方華創","cn"],["拓荊科技","cn"]]},
           {role:"設備國產化(美)",stage:"now",cos:[["Applied Materials","us"],["Lam Research","us"],["KLA","us"]]},
-          {role:"關鍵材料自主",cos:[["光洋科","tw"],["崇越","tw"],["三福化","tw"]]}],
-      mid:[{role:"在地化晶圓代工",stage:"soon",cos:[["台積電美國廠","us"],["中芯國際","cn"],["Intel Foundry","us"]]},
+          {role:"關鍵材料自主",mid:"semi_material",cos:[["光洋科","tw"],["崇越","tw"],["三福化","tw"]]}],
+      mid:[{role:"在地化晶圓代工",mid:"foundry",stage:"soon",cos:[["台積電美國廠","us"],["中芯國際","cn"],["Intel Foundry","us"]]},
           {role:"先進封裝在地化",stage:"soon",cos:[["日月光美國廠","us"],["Amkor","us"]]}],
       down:[{role:"美系AI晶片客戶",cos:[["NVIDIA","us"],["AMD","us"],["Apple","us"]]},
           {role:"中系晶片客戶",cos:[["華為海思","cn"]]}],
@@ -892,7 +882,7 @@
       var c=n.chg>=0?"#e24b4a":"#1d9e75";
       chg="<span class='tchg' style='color:"+c+";'>"+(n.chg>=0?"+":"")+n.chg.toFixed(2)+"%</span>";
     }
-    return "<div class='node' data-tname='"+n.role+"'><div class='role'><span>"+n.role+"</span>"+st+chg+"</div>"+
+    return "<div class='node' data-key='"+n.key+"'><div class='role'><span>"+n.role+"</span>"+st+chg+"</div>"+
       "<div class='cos-tags'>"+n.cos.map(coTag).join("")+"</div></div>";
   }
   function colHtml(cls,title,en,nodes){
@@ -924,12 +914,33 @@
       document.getElementById("stageHint").innerHTML="";
       if(curChainFocus){
         var isolated=!mc.up.length&&!mc.down.length;
+        var focusName=(window.masterThemeName?window.masterThemeName(curChainFocus):null)||curChainFocus;
+        // 此主題也出現在哪些策展鏈（用節點的 mid 明確對應，不再用成分股重疊猜測）
+        var rel=[];
+        Object.keys(CHAINS).forEach(function(ck){
+          ["up","mid","down"].forEach(function(tier){
+            (CHAINS[ck][tier]||[]).forEach(function(nd){
+              if(nd.mid===curChainFocus)rel.push({ck:ck,role:nd.role});
+            });
+          });
+        });
+        var btnStyle="margin-left:6px;padding:2px 10px;border-radius:5px;border:1px solid var(--line);background:transparent;color:var(--ink3);cursor:pointer;font-size:11px;";
+        var relHtml=rel.length?"<div class='chain-demand'><div class='dl'>也出現在："+
+          rel.map(function(r,i){return "<button class='chainRelBtn' data-i='"+i+"' style='"+btnStyle+"'>🌐 "+CHAINS[r.ck].label+" › "+r.role+"</button>";}).join("")+
+          "</div></div>":"";
         document.getElementById("chainDemand").innerHTML=
-          "<div class='chain-demand'><div class='dl'>🔎 聚焦主題："+curChainFocus+
+          "<div class='chain-demand'><div class='dl'>🔎 聚焦主題："+focusName+
           (isolated?" · 尚未建立上下游供應鏈關聯":"")+
-          " <button id='chainUnfocus' style='margin-left:8px;padding:2px 10px;border-radius:5px;border:1px solid var(--line);background:transparent;color:var(--ink3);cursor:pointer;font-size:11px;'>查看全部台股主檔 ▸</button></div></div>";
+          " <button id='chainUnfocus' style='"+btnStyle+"'>查看全部台股主檔 ▸</button></div></div>"+relHtml;
         var ub=document.getElementById("chainUnfocus");
         if(ub)ub.onclick=function(){curChainFocus=null;renderChain();};
+        document.querySelectorAll("#chainDemand .chainRelBtn").forEach(function(b){
+          b.onclick=function(){
+            var r=rel[+b.dataset.i];
+            curChain=r.ck;curChainFocus=null;syncChain();renderChain();
+            highlightChainNode(r.ck+"|"+r.role);
+          };
+        });
       }else{
         document.getElementById("chainDemand").innerHTML="";
       }
@@ -949,17 +960,19 @@
           if(list)list.style.display=chainGroupCollapsed[key]?"none":"";
         };
       });
-      // 節點可點：反向跳回資金流向的對應主題列
+      // 節點可點：反向跳回資金流向的對應主題列（data-key = 主題id）
       document.querySelectorAll("#chainFlow .node").forEach(function(el){
         el.style.cursor="pointer";
         el.title="點擊查看此主題的資金流向排名";
-        el.onclick=function(e){e.stopPropagation();if(window.highlightFlowTheme)window.highlightFlowTheme(el.dataset.tname);};
+        el.onclick=function(e){e.stopPropagation();if(window.highlightFlowTheme)window.highlightFlowTheme(el.dataset.key);};
       });
       return;
     }
     var d=CHAINS[curChain];
-    // 各主題節點的漲跌 = 成員公司當日漲跌的平均（查得到的才計入），每次渲染重算
+    // 各主題節點的漲跌 = 成員公司當日漲跌的平均（查得到的才計入），每次渲染重算；
+    // 同時給每個節點唯一錨點 key（鏈代號|角色名），避免跨鏈同名角色互相干擾
     d.up.concat(d.mid,d.down).forEach(function(n){
+      n.key=curChain+"|"+n.role;
       var s=0,cn=0;
       n.cos.forEach(function(co){
         var v=(typeof co[2]==="number")?co[2]:companyChg(co[0]);
@@ -991,15 +1004,16 @@
       }).join("")+"</div></div>";}
     else en.innerHTML="";
 
-    // 節點反向配對：成分股與 master 主題重疊 ≥2 檔的節點可點回資金流向
+    // 節點反向配對：只有標了 mid（對應台股主檔主題id）的節點可點回資金流向；純外商節點不可點
     d.up.concat(d.mid,d.down).forEach(function(nd){
-      var el=document.querySelector("#chainFlow .node[data-tname='"+nd.role.replace(/'/g,"\\'")+"']");
+      if(!nd.mid)return;
+      var el=document.querySelector("#chainFlow .node[data-key='"+nd.key.replace(/'/g,"\\'")+"']");
       if(!el)return;
-      var tn=window.masterThemeMatch?window.masterThemeMatch(nd.cos.map(function(co){return co[0];})):null;
+      var tn=window.masterThemeName?window.masterThemeName(nd.mid):null;
       if(!tn)return;
       el.style.cursor="pointer";
       el.title="點擊查看「"+tn+"」的資金流向排名";
-      el.onclick=function(){if(window.highlightFlowTheme)window.highlightFlowTheme(tn);};
+      el.onclick=function(){if(window.highlightFlowTheme)window.highlightFlowTheme(nd.mid);};
     });
   }
 
@@ -1017,32 +1031,19 @@
   // data.json 載入後重繪，讓主題/成分股漲跌換成真實值
   window.rerenderChain=function(){renderChain();};
 
-  // 資金流向列點過來：用成分股重疊自動找「最相關的供應鏈主題」切過去並高亮該角色節點；
-  // 重疊不足（傳產金融等沒有對應主題）才退回台股主檔視圖
-  window.highlightChainTheme=function(name){
-    var target=null,best=1; // 至少要重疊 2 檔才算對應（避免台積電這種到處都有的誤配）
-    var stocks=window.masterThemeStocks?window.masterThemeStocks(name):null;
-    if(stocks){
-      Object.keys(CHAINS).forEach(function(ck){
-        var c=CHAINS[ck];
-        ["up","mid","down"].forEach(function(tier){
-          (c[tier]||[]).forEach(function(nd){
-            var ov=0;
-            nd.cos.forEach(function(co){if(stocks.indexOf(co[0])>=0)ov++;});
-            if(ov>best){best=ov;target={chain:ck,role:nd.role};}
-          });
-        });
-      });
-    }
-    var view=target?target.chain:"master_tw";
-    var tname=target?target.role:name;
-    var focus=target?null:name;
-    if(curChain!==view||curChainFocus!==focus){curChain=view;curChainFocus=focus;syncChain();renderChain();}
-    var el=document.querySelector("#chainFlow .node[data-tname='"+String(tname).replace(/'/g,"\\'")+"']");
+  // 依唯一錨點 key 捲動並高亮供應鏈節點（台股主檔=主題id、策展鏈=鏈代號|角色名）
+  function highlightChainNode(key){
+    var el=document.querySelector("#chainFlow .node[data-key='"+String(key).replace(/'/g,"\\'")+"']");
     if(!el)return;
     el.scrollIntoView({behavior:"smooth",block:"center"});
     el.classList.add("hl");
     setTimeout(function(){el.classList.remove("hl");},2600);
+  }
+  // 資金流向列點過來：一律聚焦台股主檔該主題（id 精準對應），
+  // 聚焦列會列出「也出現在：🌐策展鏈」按鈕供切換，不再用成分股重疊猜測
+  window.highlightChainTheme=function(id){
+    if(curChain!=="master_tw"||curChainFocus!==id){curChain="master_tw";curChainFocus=id;syncChain();renderChain();}
+    highlightChainNode(id);
   };
 })();
 
