@@ -39,6 +39,21 @@ def fetch_day(ymd):
     return None, True
 
 
+def backfill_insti(date_key):
+    """回補單日法人買賣超進快照；失敗不擋主流程。"""
+    time.sleep(PAUSE)
+    try:
+        insti = fd.fetch_insti(date_key)
+    except Exception as e:
+        print(f"  法人買賣超抓取異常（略過）：{e}")
+        return
+    if insti:
+        fd.save_snapshot(date_key, [], insti=insti)
+        print(f"  法人買賣超已併入快照：{len(insti)} 檔")
+    else:
+        print("  法人買賣超無資料（可能為休市或尚未公布）。")
+
+
 def main():
     now = datetime.now(fd.TZ)
     got = 0
@@ -59,6 +74,8 @@ def main():
         if snap and len(snap.get("stocks", {})) >= COMPLETE_STOCKS:
             got += 1
             print(f"[{date_key}] 快照已完整（{len(snap['stocks'])} 檔），跳過。")
+            if not snap.get("insti"):
+                backfill_insti(date_key)
             continue
 
         print(f"[{date_key}] 抓取中 ...")
@@ -85,6 +102,7 @@ def main():
         snap = fd.save_snapshot(date_key, quotes)  # 指數留給主流程補當日即可
         got += 1
         print(f"  快照完成：{len(snap['stocks'])} 檔（累計 {got}/{TARGET_DAYS} 交易日）")
+        backfill_insti(date_key)
 
     dates = fd.snapshot_dates()
     print(f"快照共 {len(dates)} 個交易日" + (f"（{dates[0]} ~ {dates[-1]}）" if dates else ""))

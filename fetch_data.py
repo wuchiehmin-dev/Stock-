@@ -21,6 +21,7 @@ import json
 import csv
 import io
 import os
+import re
 import sys
 import time
 import urllib.request
@@ -40,6 +41,10 @@ FMTQIK = "https://www.twse.com.tw/exchangeReport/FMTQIK?response=json&date={date
 COMPANY_LIST_OTC = "https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv"  # 上櫃公司產業別
 TPEX_DAILY = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes"  # 最新交易日全上櫃收盤
 TPEX_DAILY_BY_DATE = "https://www.tpex.org.tw/www/zh-tw/afterTrading/dailyQuotes?date={roc}&response=json"  # 指定日期回補
+
+# 三大法人買賣超（上市 T86 + 上櫃 insti dailyTrade），皆免金鑰、可指定日期
+T86 = "https://www.twse.com.tw/rwd/zh/fund/T86?response=json&date={date}&selectType=ALLBUT0999"
+TPEX_INSTI = "https://www.tpex.org.tw/www/zh-tw/insti/dailyTrade?type=Daily&sect=EW&response=json&date={roc}"
 
 # 證交所產業別「代碼」→ 名稱（t187ap03_L.csv 的產業別欄位給的是代碼）
 INDUSTRY_CODE2NAME = {
@@ -403,15 +408,20 @@ def load_snapshot(date_key):
         return None
 
 
-def save_snapshot(date_key, quotes, index=None):
+def save_snapshot(date_key, quotes, index=None, insti=None):
     """寫入每日快照。同日重寫採合併：新報價覆蓋同代號、舊有的保留；
-    指數新值優先、抓不到保留舊值 → 部分失敗的執行不會讓快照退化。"""
+    指數/法人新值優先、抓不到保留舊值 → 部分失敗的執行不會讓快照退化。"""
     os.makedirs(SNAP_DIR, exist_ok=True)
     old = load_snapshot(date_key) or {}
     stocks = old.get("stocks", {})
     for q in quotes:
         stocks[q["code"]] = {"n": q["name"], "c": q["close"], "p": q["change_pct"], "v": q["volume"]}
+    ins = old.get("insti", {})
+    if insti:
+        ins.update(insti)
     snap = {"date": date_key, "index": index or old.get("index"), "stocks": stocks}
+    if ins:
+        snap["insti"] = ins
     with open(snapshot_path(date_key), "w", encoding="utf-8") as f:
         json.dump(snap, f, ensure_ascii=False, separators=(",", ":"))
     return snap
@@ -469,10 +479,14 @@ def sync_history_from_snapshots():
         snap = load_snapshot(d)
         if not snap or not snap.get("stocks"):
             continue
-        day_themes, day_stocks, _ = compute_day_record(snapshot_quotes(snap))
+        day_themes, day_stocks, _, ins_total = compute_day_record(
+            snapshot_quotes(snap), snap.get("insti"))
         if day_themes is None:
             break
-        history[d] = {"themes": day_themes, "stocks": day_stocks}
+        rec = {"themes": day_themes, "stocks": day_stocks}
+        if ins_total:
+            rec["ins_total"] = ins_total
+        history[d] = rec
     dates = sorted(history.keys(), reverse=True)[:HISTORY_KEEP_DAYS]
     history = {d: history[d] for d in dates}
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
@@ -496,16 +510,26 @@ def compound_chg(chgs):
     return round((acc - 1) * 100, 2)
 
 
-def compute_day_record(quotes):
-    """單日主題聚合。回傳 (day_themes, day_stocks, themes_out)；主檔缺失回 (None, None, None)。
-    回補歷史腳本也共用這個函式。"""
+def compute_day_record(quotes, insti=None):
+    """單日主題聚合。回傳 (day_themes, day_stocks, themes_out, ins_total)；
+    主檔缺失回 (None, None, None, None)。回補歷史腳本也共用這個函式。
+    insti = {code: [外資, 投信, 自營商] 買賣超股數}，有給時額外算每主題與
+    全市場的法人買賣超金額（買賣超股數 × 當日收盤，億元）。"""
     master = load_master_themes()
     if not master:
-        return None, None, None
+        return None, None, None, None
 
     qmap = {q["code"]: q for q in quotes}
 
-    # 當日：每主題加權漲跌 + 成交金額（億元）；每檔個股漲跌
+    def insti_amt(code):
+        """單檔法人買賣超金額 [外資, 投信, 自營商]（億元）；無資料回 None。"""
+        iv = insti.get(code) if insti else None
+        q = qmap.get(code)
+        if not iv or not q:
+            return None
+        return [v * q["close"] / 1e8 for v in iv]
+
+    # 當日：每主題加權漲跌 + 成交金額（億元）+ 法人買賣超；每檔個股漲跌
     day_themes = {}
     day_stocks = {}
     themes_out = []
@@ -513,6 +537,7 @@ def compute_day_record(quotes):
         stocks_out = []
         w_sum = 0.0
         wchg_sum = 0.0
+        ins_sum = [0.0, 0.0, 0.0]
         for code, name in t.get("stocks", []):
             q = qmap.get(code)
             if q:
@@ -522,13 +547,18 @@ def compute_day_record(quotes):
                 wchg_sum += val * chg
                 day_stocks[code] = chg
                 stocks_out.append({"code": code, "name": name, "chg": chg, "value": val})
+                ia = insti_amt(code)
+                if ia:
+                    ins_sum = [a + b for a, b in zip(ins_sum, ia)]
             else:
                 # 上櫃或當日無成交 → 無報價，前端以 0 顯示
                 stocks_out.append({"code": code, "name": name, "chg": None, "value": None})
         chg_d = round(wchg_sum / w_sum, 2) if w_sum > 0 else 0.0
         vol_d = round(w_sum, 1)
         day_themes[t["id"]] = {"chg": chg_d, "vol": vol_d}
-        themes_out.append({
+        if insti:
+            day_themes[t["id"]]["ins"] = [round(x, 2) for x in ins_sum]
+        entry = {
             "id": t["id"],
             "name": t["name"],
             "group": t.get("group"),
@@ -539,30 +569,49 @@ def compute_day_record(quotes):
             "chg": {"d": chg_d},
             "vol": {"d": vol_d},
             "stocks": stocks_out,
-        })
-    return day_themes, day_stocks, themes_out
+        }
+        if insti:
+            entry["insti"] = {"d": [round(x, 2) for x in ins_sum]}
+        themes_out.append(entry)
+
+    # 全市場三大法人買賣超合計（含主題表外的個股）
+    ins_total = None
+    if insti:
+        tot = [0.0, 0.0, 0.0]
+        for code, iv in insti.items():
+            q = qmap.get(code)
+            if not q:
+                continue
+            tot = [a + v * q["close"] / 1e8 for a, v in zip(tot, iv)]
+        ins_total = [round(x, 1) for x in tot]
+
+    return day_themes, day_stocks, themes_out, ins_total
 
 
-def build_theme_payload(quotes, data_date):
+def build_theme_payload(quotes, data_date, insti=None):
     """依 master_tw.json 主題聚合真實量價，並用 history_tw.json 累積算週/月動能。
-    回傳 (themes_out, stock_chg_out)；主檔缺失時回傳 (None, None)。"""
-    day_themes, day_stocks, themes_out = compute_day_record(quotes)
+    回傳 (themes_out, stock_chg_out, insti_total)；主檔缺失時回傳 (None, None, None)。"""
+    day_themes, day_stocks, themes_out, ins_total = compute_day_record(quotes, insti)
     if themes_out is None:
-        return None, None
+        return None, None, None
 
     # 更新歷史（以 data_date 為 key，重跑同一天會覆蓋不會重複累積）
     history = load_history()
-    history[data_date] = {"themes": day_themes, "stocks": day_stocks}
+    rec = {"themes": day_themes, "stocks": day_stocks}
+    if ins_total:
+        rec["ins_total"] = ins_total
+    history[data_date] = rec
     dates = sorted(history.keys(), reverse=True)[:HISTORY_KEEP_DAYS]
     history = {d: history[d] for d in dates}
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False)
     print(f"  歷史資料：{len(dates)} 個交易日（{dates[-1]} ~ {dates[0]}）")
 
-    # 週(5日)/月(21日)：漲跌複利合成、量加總（歷史不足就用現有天數）
+    # 週(5日)/月(21日)：漲跌複利合成、量與法人買賣超加總（歷史不足就用現有天數）
     for th in themes_out:
         tid = th["id"]
         w_chgs, w_vol, m_chgs, m_vol = [], 0.0, [], 0.0
+        w_ins, m_ins, has_ins = [0.0] * 3, [0.0] * 3, False
         for i, d in enumerate(dates):
             rec = history[d]["themes"].get(tid)
             if not rec:
@@ -573,10 +622,38 @@ def build_theme_payload(quotes, data_date):
             if i < 21:
                 m_chgs.append(rec["chg"])
                 m_vol += rec["vol"]
+            ins = rec.get("ins")
+            if ins:
+                has_ins = True
+                if i < 5:
+                    w_ins = [a + b for a, b in zip(w_ins, ins)]
+                if i < 21:
+                    m_ins = [a + b for a, b in zip(m_ins, ins)]
         th["chg"]["w"] = compound_chg(w_chgs)
         th["chg"]["m"] = compound_chg(m_chgs)
         th["vol"]["w"] = round(w_vol, 1)
         th["vol"]["m"] = round(m_vol, 1)
+        if has_ins:
+            th.setdefault("insti", {})
+            th["insti"]["w"] = [round(x, 1) for x in w_ins]
+            th["insti"]["m"] = [round(x, 1) for x in m_ins]
+
+    # 全市場法人買賣超合計（日/週/月），供前端頁腳顯示
+    insti_total = {}
+    if history.get(data_date, {}).get("ins_total"):
+        insti_total["d"] = history[data_date]["ins_total"]
+    w_tot, m_tot, has_tot = [0.0] * 3, [0.0] * 3, False
+    for i, d in enumerate(dates[:21]):
+        it = history[d].get("ins_total")
+        if not it:
+            continue
+        has_tot = True
+        if i < 5:
+            w_tot = [a + b for a, b in zip(w_tot, it)]
+        m_tot = [a + b for a, b in zip(m_tot, it)]
+    if has_tot:
+        insti_total["w"] = [round(x, 1) for x in w_tot]
+        insti_total["m"] = [round(x, 1) for x in m_tot]
 
     # 個股：日 + 週（供關係圖外框配色）
     stock_chg_out = {}
@@ -593,7 +670,7 @@ def build_theme_payload(quotes, data_date):
         if entry:
             stock_chg_out[code] = entry
 
-    return themes_out, stock_chg_out
+    return themes_out, stock_chg_out, (insti_total or None)
 
 
 def _pick(row, *keys):
@@ -725,6 +802,96 @@ def fetch_index(data_date):
     return None
 
 
+def _classify_insti_fields(fields):
+    """把「買賣超股數」欄位分類成 外資/投信/自營商 三組索引。
+    去掉括號註記後判斷，同時容錯上市 T86 與上櫃 dailyTrade 的欄名差異。
+    外資 = 外陸資(不含外資自營商) + 外資自營商（與一般看盤軟體口徑一致）。"""
+    f_idx, t_idx, dl_agg, dl_parts = [], [], [], []
+    for i, name in enumerate(fields):
+        if "買賣超" not in name or "股數" not in name:
+            continue
+        base = re.sub(r"[（(][^（()）]*[）)]", "", name)
+        if "三大法人" in base or "合計" in base:
+            continue
+        if "投信" in base:
+            t_idx.append(i)
+        elif "外資自營商" in base:
+            f_idx.append(i)
+        elif "外資" in base or "外陸資" in base:
+            f_idx.append(i)
+        elif "自營商" in base:
+            if name == base:  # 無括號 → 自營商合計欄
+                dl_agg.append(i)
+            else:             # (自行買賣)/(避險) 分項，無合計欄時相加
+                dl_parts.append(i)
+    return f_idx, t_idx, (dl_agg if dl_agg else dl_parts)
+
+
+def _parse_insti_rows(fields, rows):
+    """解析一張法人買賣超表 → {code: [外資股數, 投信股數, 自營商股數]}。"""
+    f_idx, t_idx, dl_idx = _classify_insti_fields(fields)
+    if not (f_idx or t_idx or dl_idx):
+        return None
+
+    def idx(*names):
+        for n in names:
+            for i, f in enumerate(fields):
+                if n in f:
+                    return i
+        return None
+
+    i_code = idx("證券代號", "代號")
+    if i_code is None:
+        return None
+    out = {}
+    for row in rows:
+        try:
+            code = str(row[i_code]).strip()
+        except Exception:
+            continue
+        if not (code.isdigit() and len(code) == 4):
+            continue
+
+        def sum_cols(idxs):
+            v = 0.0
+            for i in idxs:
+                x = to_float(row[i]) if i < len(row) else None
+                if x:
+                    v += x
+            return v
+
+        out[code] = [sum_cols(f_idx), sum_cols(t_idx), sum_cols(dl_idx)]
+    return out or None
+
+
+def fetch_insti(data_date):
+    """抓 data_date 的三大法人個股買賣超股數（上市 T86 + 上櫃 dailyTrade）。
+    回傳 {code: [外資, 投信, 自營商]}（股數，買超為正）；完全無資料回 None。
+    法人資料約 15:00 後公布，尚未公布時回 None，下次執行會自動補上。"""
+    ymd = data_date.replace("-", "")
+    y, m, d = data_date.split("-")
+    roc = f"{int(y) - 1911}/{m}/{d}"
+    result = {}
+
+    data = fetch_json_retry(T86.format(date=ymd), f"法人買賣超 T86 {ymd}", tries=2)
+    if isinstance(data, dict) and data.get("stat") == "OK":
+        parsed = _parse_insti_rows(data.get("fields", []), data.get("data", []))
+        if parsed:
+            result.update(parsed)
+            print(f"  法人買賣超（上市）：{len(parsed)} 檔")
+
+    time.sleep(2)
+    data = fetch_json_retry(TPEX_INSTI.format(roc=roc), f"法人買賣超 上櫃 {roc}", tries=2)
+    if isinstance(data, dict):
+        for tbl in data.get("tables") or []:
+            parsed = _parse_insti_rows(tbl.get("fields", []), tbl.get("data", []))
+            if parsed:
+                result.update(parsed)
+                print(f"  法人買賣超（上櫃）：{len(parsed)} 檔")
+                break
+    return result or None
+
+
 def acquire_quotes(now):
     """取得目標交易日的上市全市場報價。
     盤中防呆：台北 14:00 前執行一律回補「最近一個已收盤交易日」，避免產出半套資料。
@@ -779,7 +946,7 @@ def rebuild_outputs(now, industry_lookup):
         print(f"  ! 彙總為空，沿用上次 heatmap（{len(sectors)} 板塊）。")
 
     sync_history_from_snapshots()
-    themes, stock_chg = build_theme_payload(quotes, latest)
+    themes, stock_chg, insti_total = build_theme_payload(quotes, latest, snap.get("insti"))
     if themes is not None:
         print(f"  主題聚合：{len(themes)} 個主題、{len(stock_chg)} 檔個股漲跌")
 
@@ -799,13 +966,15 @@ def rebuild_outputs(now, industry_lookup):
         "updated": now.strftime("%Y-%m-%d %H:%M"),
         "data_date": latest,
         "market": "TW",
-        "source": "TWSE STOCK_DAY_ALL / MI_INDEX / FMTQIK + TPEx dailyQuotes + t187ap03_L/O",
-        "note": "板塊漲跌為成交金額加權；面積為當日成交金額(億元)近似，非真實市值。含上市與上櫃。",
+        "source": "TWSE STOCK_DAY_ALL / MI_INDEX / FMTQIK / T86 + TPEx dailyQuotes/insti + t187ap03_L/O",
+        "note": "板塊漲跌為成交金額加權；面積為當日成交金額(億元)近似，非真實市值。含上市與上櫃。法人買賣超金額=買賣超股數×收盤價。",
         "heatmap": sectors,
     }
     if themes is not None:
         payload["themes"] = themes       # 資金流向極細主題（真實量價）
         payload["stock_chg"] = stock_chg  # 個股漲跌 {code:{d,w}}，供關係圖配色
+    if insti_total:
+        payload["insti_total"] = insti_total  # 全市場三大法人買賣超 {d/w/m:[外資,投信,自營]}（億元）
     if market_index:
         payload["index"] = market_index   # 大盤加權指數（標題列用）
     # 全市場「股名→當日漲跌」對照：供應鏈各主題視圖的公司標籤用
@@ -853,8 +1022,18 @@ def main():
     else:
         print("  ! 加權指數抓取失敗（重建時沿用最近快照）。")
 
-    snap = save_snapshot(data_date, quotes, market_index)
-    print(f"  快照 {snapshot_path(data_date)}：{len(snap['stocks'])} 檔")
+    time.sleep(2)
+    try:
+        insti = fetch_insti(data_date)
+    except Exception as e:
+        print(f"  ! 法人買賣超抓取異常（略過）：{e}")
+        insti = None
+    if not insti:
+        print("  法人買賣超無資料（可能尚未公布，下次執行自動補上）。")
+
+    snap = save_snapshot(data_date, quotes, market_index, insti)
+    print(f"  快照 {snapshot_path(data_date)}：{len(snap['stocks'])} 檔"
+          + (f"、法人 {len(snap.get('insti', {}))} 檔" if snap.get("insti") else ""))
 
     rebuild_outputs(now, industry_lookup)
 
