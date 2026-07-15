@@ -2,6 +2,11 @@
  "daily": [
   {
    "date": "2026-07-15",
+   "file": "daily/digitimes_daily_20260715.html",
+   "title": "DIGITIMES 每日彙整 2026/07/15"
+  },
+  {
+   "date": "2026-07-15",
    "file": "daily/2026-07-15.md",
    "title": "每日重點新聞（範例格式）"
   }

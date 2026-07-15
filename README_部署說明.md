@@ -119,7 +119,12 @@ GitHub Pages「報告」分頁自動列出、點選即可閱讀
 - 每日新聞匯總 → `reports/daily/YYYY-MM-DD.md`
 - 每週焦點報告 → `reports/weekly/YYYY-MM-DD.md`（建議用該週最後一個交易日命名）
 - 第一行寫 `# 標題`，清單會顯示這個標題
-- `reports/index.json` 不用手動維護，push 後 Actions 會自動重建
+- **HTML 報告也支援**（例如 DIGITIMES 每日彙整）：放
+  `reports/daily/digitimes_daily_YYYYMMDD.html`（檔名含 `YYYYMMDD` 或
+  `YYYY-MM-DD` 都認得），清單標題取 HTML 的 `<title>` 或第一個 `<h1>`，
+  點選後會在報告分頁內嵌原樣顯示
+- `reports/index.json` 不用手動維護，push 後 Actions 會自動重建（`reports-index.yml`
+  對 `reports/**` 的任何 push 都會觸發，不分 .md / .html）
 
 ### 前提：本機能對這個 repo 執行 `git push`
 
@@ -144,10 +149,12 @@ GitHub Pages「報告」分頁自動列出、點選即可閱讀
 
 在你既有的排程任務指示最後，加上類似這段（`<repo路徑>` 換成你電腦上的實際路徑）：
 
-> 報告完成後，把內容存成 Markdown 到本機的 Stock- repo：
+> 報告完成後，把內容存到本機的 Stock- repo：
 > 每日報告存 `reports/daily/今天日期(YYYY-MM-DD).md`、
 > 每週報告存 `reports/weekly/本週最後交易日日期(YYYY-MM-DD).md`，
-> 第一行為 `# 報告標題`。然後在該 repo 目錄下依序執行：
+> 第一行為 `# 報告標題`；
+> DIGITIMES 每日彙整 HTML 存 `reports/daily/digitimes_daily_今天日期(YYYYMMDD).html`。
+> 然後在該 repo 目錄下依序執行：
 > ```
 > cd <repo路徑>
 > git pull --rebase origin main
