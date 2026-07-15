@@ -88,12 +88,6 @@ INDUSTRY_MAP = {
 }
 
 
-def fetch_json(url):
-    req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode("utf-8"))
-
-
 def fetch_csv(url):
     req = urllib.request.Request(url, headers=UA)
     with urllib.request.urlopen(req, timeout=30) as r:
@@ -235,7 +229,6 @@ def fetch_quotes():
     i_vol = idx("成交股數", "成交量")
     i_close = idx("收盤價")
     i_change = idx("漲跌價差", "漲跌")
-    i_open = idx("開盤價")
 
     out = []
     for row in data["data"]:
