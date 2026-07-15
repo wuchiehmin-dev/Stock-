@@ -279,7 +279,7 @@
     if(window.LIVE_TW && window.LIVE_TW.themes){
       return window.LIVE_TW.themes.map(function(t){
         return {id:t.id,n:t.name,d:t.chg.d,w:t.chg.w,m:t.chg.m,
-          vol:{d:t.vol.d,w:t.vol.w,m:t.vol.m}};
+          vol:{d:t.vol.d,w:t.vol.w,m:t.vol.m},ins:t.insti||null};
       });
     }
     return MASTER_TW.map(function(t){
@@ -532,24 +532,42 @@
     return row;
   }
 
+  function fmtIns(v){return (v>=0?"+":"")+(Math.round(v*10)/10);}
+
   function renderFlow(m){
     var up=m.up,down=m.down;
     var mf=cur==="TW"?window.masterToFlow():(MFLOW[cur]?MFLOW[cur].themes:[]);
+    // 維度切換只在台股主檔（有 FLOW_META）啟用；其他市場一律動能排序
+    var dim=(cur==="TW")?curMfDim:"mom";
+    // 法人維度需要 data.json 已累積法人資料，否則退回動能排序
+    var hasIns=mf.some(function(t){return t.ins&&t.ins[curMfPer];});
+    var insFallback=(dim==="insti"&&!hasIns);
+    if(insFallback)dim="mom";
     document.getElementById("mfHdr").innerHTML=
-      "<span>#</span><span>產業主題</span><span>量價動能</span><span class='r'>漲跌幅</span><span class='r'>成交量</span>";
-    var rows=mf.map(function(t){return {id:t.id,n:t.n,chg:t[curMfPer],vol:t.vol[curMfPer],
-      mom:+((t.vol[curMfPer]/100)*t[curMfPer]).toFixed(1)};});
+      "<span>#</span><span>產業主題</span><span>"+(dim==="insti"?"法人買賣超(億)":"量價動能")+"</span><span class='r'>漲跌幅</span><span class='r'>成交量</span>";
+    var rows=mf.map(function(t){
+      var ins=(t.ins&&t.ins[curMfPer])||null;
+      return {id:t.id,n:t.n,chg:t[curMfPer],vol:t.vol[curMfPer],ins:ins,
+        mom:dim==="insti"?(ins?+((ins[0]+ins[1]+ins[2]).toFixed(1)):0)
+                         :+((t.vol[curMfPer]/100)*t[curMfPer]).toFixed(1)};});
     var momMax=Math.max.apply(null,rows.map(function(r){return Math.abs(r.mom);}))||1;
     var volMax=Math.max.apply(null,rows.map(function(r){return r.vol;}))||1;
     var fbox=document.getElementById("flowlist");fbox.innerHTML="";
 
-    // 維度切換只在台股主檔（有 FLOW_META）啟用；其他市場一律動能排序
-    var dim=(cur==="TW")?curMfDim:"mom";
     var note=document.getElementById("mfNote");
-    if(dim==="mom"){
+    if(dim==="insti"){
+      rows.sort(function(a,b){return b.mom-a.mom;});
+      rows.forEach(function(r,i){
+        var el=mfRowEl(r,i+1,up,down,momMax,volMax);
+        if(r.ins)el.title="外資 "+fmtIns(r.ins[0])+" · 投信 "+fmtIns(r.ins[1])+" · 自營 "+fmtIns(r.ins[2])+"（億）"+(el.title?"\n"+el.title:"");
+        fbox.appendChild(el);});
+      if(note)note.textContent="三大法人買賣超 · 外資含外資自營商 · 金額＝買賣超股數×收盤價 · 週/月為交易日累積 · 單位億元 · 滑鼠停留看外資/投信/自營分項";
+    }else if(dim==="mom"){
       rows.sort(function(a,b){return b.chg-a.chg;});
       rows.forEach(function(r,i){fbox.appendChild(mfRowEl(r,i+1,up,down,momMax,volMax));});
-      if(note)note.textContent="代理指標，非實際買賣超金額 · 動能長條為排序依據 · 依漲跌幅排序 · 量單位億元";
+      if(note)note.textContent=insFallback
+        ?"法人買賣超資料尚未累積（待每日自動更新後出現）· 先以動能排序顯示"
+        :"代理指標，非實際買賣超金額 · 動能長條為排序依據 · 依漲跌幅排序 · 量單位億元";
     }else{
       // 依題材(大題材)分組，同一主題可跨多個題材 → 一列進多組
       var groups={},order=[];
@@ -584,9 +602,17 @@
       });
       if(note)note.textContent="依題材分組（同一主題可跨多個題材） · 組標題為成交金額加權漲跌 · 點標題可收合 · 量單位億元";
     }
-    var net=rows.reduce(function(a,d){return a+d.mom;},0);
     var foot=document.createElement("div");foot.className="flow-foot";
-    foot.innerHTML="<span>← 流出 ／ 流入 →（"+m.label+" 配色）</span><span>全市場淨動能 "+(net>=0?"+":"")+net.toFixed(0)+"</span>";
+    var itot=(dim==="insti"&&window.LIVE_TW&&window.LIVE_TW.insti_total)?window.LIVE_TW.insti_total[curMfPer]:null;
+    if(itot){
+      var isum=itot[0]+itot[1]+itot[2];
+      foot.innerHTML="<span>← 賣超 ／ 買超 →（"+m.label+" 配色）</span>"+
+        "<span>全市場三大法人 "+fmtIns(isum)+"億（外資 "+fmtIns(itot[0])+" · 投信 "+fmtIns(itot[1])+" · 自營 "+fmtIns(itot[2])+"）</span>";
+    }else{
+      var net=rows.reduce(function(a,d){return a+d.mom;},0);
+      foot.innerHTML="<span>← 流出 ／ 流入 →（"+m.label+" 配色）</span><span>"+
+        (dim==="insti"?"主題合計法人買賣超 ":"全市場淨動能 ")+(net>=0?"+":"")+net.toFixed(0)+(dim==="insti"?"億":"")+"</span>";
+    }
     fbox.appendChild(foot);
   }
 
@@ -617,9 +643,9 @@
     b.onclick=function(){curMfPer=x[0];syncMfPer();renderFlow(MK[cur]);};mfptabs.appendChild(b);});
   function syncMfPer(){[].forEach.call(mfptabs.children,function(b){b.className=b.dataset.p===curMfPer?"on":"";});}
 
-  // 維度切換：動能排序 / 依題材
+  // 維度切換：動能排序 / 依題材 / 三大法人買賣超
   var mfdtabs=document.getElementById("mfDimTabs");
-  [["mom","動能"],["theme","依題材"]].forEach(function(x){var b=document.createElement("button");
+  [["mom","動能"],["theme","依題材"],["insti","法人買賣超"]].forEach(function(x){var b=document.createElement("button");
     b.textContent=x[1];b.dataset.d=x[0];
     b.onclick=function(){curMfDim=x[0];syncMfDim();renderFlow(MK[cur]);};mfdtabs.appendChild(b);});
   function syncMfDim(){[].forEach.call(mfdtabs.children,function(b){b.className=b.dataset.d===curMfDim?"on":"";});}
