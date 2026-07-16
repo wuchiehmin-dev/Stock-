@@ -283,9 +283,8 @@
   </div>
 
   <div class="foot">
-    資料來源：規劃接入 台股 證交所 OpenAPI · 美股 FMP/Alpha Vantage · 韓日 Yahoo Finance/twelvedata<br>
-    目前顯示為樣板資料，供 Phase 1 版面驗證使用 · 各市場更新頻率依當地盤後時間<br>
-    Phase 2 接入真實資料（分市場模組），Phase 3 上架 GitHub Pages，Phase 4 加自動排程
+    資料來源：台股 證交所 STOCK_DAY_ALL / MI_INDEX / T86＋櫃買 · 美股 Alpha Vantage、韓日 twelvedata（規劃接入）<br>
+    <span id="dataStatus">—</span> · 各市場更新頻率依當地盤後時間
   </div>
 
 </div>
@@ -659,7 +658,26 @@
     fbox.appendChild(foot);
   }
 
+  // 該市場是否已接真實資料（目前僅台股；US/KR/JP 管線上線後在此擴充回傳其 LIVE 物件）
+  function marketLive(k){
+    return (k==="TW" && window.LIVE_TW && window.LIVE_TW.heatmap) ? window.LIVE_TW : null;
+  }
+  // 依當前市場動態切換標頭副標與頁尾狀態，避免「台股已是真資料卻仍寫樣板 DEMO」的誤導
+  function updateDataStatus(){
+    var live=marketLive(cur), label=(MK[cur]?MK[cur].label:cur);
+    var sub=document.querySelector(".brand small"), st=document.getElementById("dataStatus");
+    if(live){
+      var d=live.data_date||live.updated||"";
+      if(sub) sub.textContent="SECTOR INTELLIGENCE · "+label+"真實資料 · "+d;
+      if(st) st.textContent=label+"為真實盤後資料（"+d+"）· 每交易日自動更新";
+    }else{
+      if(sub) sub.textContent="SECTOR INTELLIGENCE · "+label+" · 樣板資料 DEMO";
+      if(st) st.textContent=label+"仍為樣板資料，真實資料建置中";
+    }
+  }
+
   function render(){
+    updateDataStatus();
     var m=MK[cur];
     document.getElementById("idxVal").textContent=m.idx+"  "+m.idxVal;
     var chgEl=document.getElementById("idxChg");
@@ -823,8 +841,6 @@
         MK.TW.idxVal=j.index.close.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
         if(j.index.chg_pct!=null) MK.TW.idxChg=(j.index.chg_pct>=0?"+":"")+j.index.chg_pct.toFixed(2)+"%";
       }
-      var sub=document.querySelector(".brand small");
-      if(sub) sub.textContent="SECTOR INTELLIGENCE · 台股真實資料 · "+(j.data_date||j.updated||"");
       if(j.themes){
         var note=document.querySelector(".flow-note");
         if(note) note.textContent="真實資料（"+(j.data_date||"")+"）· 動能 = 成交金額 × 漲跌幅 · 週/月為交易日累積 · 量單位億元";
