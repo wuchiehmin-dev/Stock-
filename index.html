@@ -145,6 +145,9 @@
   .chain-group .gcnt{color:var(--ink3);font-size:11px;margin-left:auto;}
   .chain-glist .node:last-child{margin-bottom:9px;}
   .node.hl,.mf-row.hl{outline:2px solid #3987e5;box-shadow:0 0 0 4px rgba(57,135,229,.18);border-radius:7px;}
+  /* 鍵盤操作：所有原生按鈕與 role=button 的可點元素都有可見焦點框 */
+  button:focus-visible,[role=button]:focus-visible{outline:2px solid #3987e5;outline-offset:1px;box-shadow:0 0 0 4px rgba(57,135,229,.18);}
+  .day-tabs button:disabled{opacity:.38;cursor:not-allowed;}
   .node .tchg{margin-left:auto;font-family:var(--mono);font-size:11px;white-space:nowrap;}
   .co .cochg{font-family:var(--mono);font-size:9px;margin-left:3px;}
   .node .role{font-size:11px;color:var(--ink2);margin-bottom:5px;letter-spacing:.3px;display:flex;align-items:center;justify-content:space-between;gap:6px;}
@@ -216,7 +219,7 @@
   <div class="block">
     <p class="section-label">板塊熱力圖 · <span id="hmHint"></span>
       <span class="tag">TREEMAP</span></p>
-    <div id="tm"></div>
+    <div id="tm" role="img" aria-label="板塊熱力圖：各產業板塊當日漲跌與成交金額"></div>
     <div class="legend"><span>跌</span><span class="bar" id="legendBar"></span><span>漲</span>
       <span style="margin-left:6px;">-3% ← 0 → +3%</span></div>
   </div>
@@ -293,6 +296,16 @@
 (function(){
   var MASTER_TW=[];
 
+  // 讓可點擊的 div 具備按鈕語義：鍵盤可聚焦、Enter/Space 觸發、螢幕報讀器可辨識。
+  // 各套用點每次 render 都重建元素，不會累積 listener。掛 window 供後面兩個 IIFE 共用。
+  window.a11yBtn=function(el,label){
+    el.setAttribute("role","button");el.setAttribute("tabindex","0");
+    if(label)el.setAttribute("aria-label",label);
+    el.addEventListener("keydown",function(e){
+      if(e.key==="Enter"||e.key===" "){e.preventDefault();el.click();}});
+    return el;
+  };
+
   // ====== 台股主檔轉換器（主檔→三區塊格式）======
   // 漲跌：優先用 data.json 的真實漲跌（LIVE_CHG），無資料時退回代號雜湊的樣板值
   function mChg(code){
@@ -315,15 +328,18 @@
       return {name:s.name,chg:Math.round(s.wchg/s.wsum*100)/100,value:Math.round(s.wsum),children:top};
     }).sort(function(a,b){return b.value-a.value;});
   }
+  // 真實資料 themes → 資金流向列結構（任一市場的 data_*.json 皆為同一 schema）
+  function liveThemesToFlow(live){
+    return live.themes.map(function(t){
+      return {id:t.id,n:t.name,d:t.chg.d,w:t.chg.w,m:t.chg.m,
+        vol:{d:t.vol.d,w:t.vol.w,m:t.vol.m},ins:t.insti||null};
+    });
+  }
+  window.liveThemesToFlow=liveThemesToFlow;
   // 主檔→資金流向（每主題算動能）
   function masterToFlow(){
     // 真實資料：data.json 的 themes（日=當日、週/月=history 累積複利）
-    if(window.LIVE_TW && window.LIVE_TW.themes){
-      return window.LIVE_TW.themes.map(function(t){
-        return {id:t.id,n:t.name,d:t.chg.d,w:t.chg.w,m:t.chg.m,
-          vol:{d:t.vol.d,w:t.vol.w,m:t.vol.m},ins:t.insti||null};
-      });
-    }
+    if(window.LIVE_TW && window.LIVE_TW.themes) return liveThemesToFlow(window.LIVE_TW);
     return MASTER_TW.map(function(t){
       var tw=0,tc=0,vol=0;
       t.s.forEach(function(st){var chg=mChg(st[0]),w=mWeight(st[0]);tw+=w;tc+=w*chg;vol+=w;});
@@ -508,6 +524,7 @@
   };
 
   var cur="TW", curMfPer="d";
+  window.LIVE={};   // 各市場真實資料快取 {TW:data.json, US:data_us.json, ...}；無檔的市場維持樣板
   var tmChart=echarts.init(document.getElementById("tm"),null,{renderer:"canvas"});
 
   function colFn(chg,up,down){var t=Math.max(-3,Math.min(3,chg))/3;
@@ -518,9 +535,10 @@
   function renderHeatmap(m){
     var up=m.up,down=m.down;
     var tmData;
-    if(cur==="TW" && window.LIVE_TW && window.LIVE_TW.heatmap){
-      // 真實資料（data.json）：結構為 [{name,chg,value,children:[{name,value,chg}]}]
-      tmData=window.LIVE_TW.heatmap.map(function(s){
+    var live=marketLive(cur);
+    if(live){
+      // 真實資料（data.json / data_us.json…）：結構為 [{name,chg,value,children:[{name,value,chg}]}]
+      tmData=live.heatmap.map(function(s){
         var kids=s.children.map(function(k){return {name:k.name,value:k.value,chg:k.chg,itemStyle:{color:colFn(k.chg,up,down)}};});
         return {name:s.name,chg:s.chg,value:s.value,children:kids,itemStyle:{color:colFn(s.chg,up,down)}};});
     } else if(cur==="TW"){
@@ -536,6 +554,8 @@
         var chg=+(ws/sum).toFixed(2);
         return {name:s.n,chg:chg,children:kids,itemStyle:{color:colFn(chg,up,down)}};});
     }
+    document.getElementById("tm").setAttribute("aria-label",
+      m.label+"板塊熱力圖：各產業板塊當日漲跌與成交金額"+(live?"（真實資料）":"（樣板資料）"));
     tmChart.setOption({backgroundColor:"transparent",
       tooltip:{formatter:function(i){var c=i.data.chg;return i.name+"<br/>權重 "+i.value+"<br/>"+(c>0?"+":"")+c+"%";},
         backgroundColor:"#141821",borderColor:"#252b38",textStyle:{color:"#e6e9ef",fontSize:12}},
@@ -570,6 +590,7 @@
       row.style.cursor="pointer";
       row.title="點擊查看此主題在供應鏈上中下游的位置";
       row.onclick=function(){if(window.highlightChainTheme)window.highlightChainTheme(r.id);};
+      window.a11yBtn(row);
     }
     return row;
   }
@@ -578,9 +599,11 @@
 
   function renderFlow(m){
     var up=m.up,down=m.down;
-    var mf=cur==="TW"?window.masterToFlow():(MFLOW[cur]?MFLOW[cur].themes:[]);
-    // 維度切換只在台股主檔（有 FLOW_META）啟用；其他市場一律動能排序
-    var dim=(cur==="TW")?curMfDim:"mom";
+    var live=marketLive(cur);
+    var mf=(live&&live.themes)?liveThemesToFlow(live)
+          :(cur==="TW"?window.masterToFlow():(MFLOW[cur]?MFLOW[cur].themes:[]));
+    // 維度可用性見 mfDimAvail：題材分組僅台股主檔（FLOW_META）、法人需該市場真實資料
+    var dim=mfDimAvail(curMfDim)?curMfDim:"mom";
     // 法人維度需要 data.json 已累積法人資料，否則退回動能排序
     var hasIns=mf.some(function(t){return t.ins&&t.ins[curMfPer];});
     var insFallback=(dim==="insti"&&!hasIns);
@@ -631,6 +654,7 @@
           "<span class='gcnt'>"+gg.rows.length+"</span>"+
           "<span class='gchg' style='color:"+gc+";'>"+(gchg>=0?"+":"")+gchg.toFixed(2)+"%</span>"+
           "<span class='gvol'>"+fmtVol(Math.round(gg.vs))+"億</span>";
+        window.a11yBtn(h);h.setAttribute("aria-expanded",coll?"false":"true");
         fbox.appendChild(h);
         var body=[];
         gg.rows.sort(function(a,b){return b.r.chg-a.r.chg;}).forEach(function(o){
@@ -640,12 +664,13 @@
         });
         h.onclick=function(){mfCollapsed[key]=!mfCollapsed[key];
           h.classList.toggle("collapsed");
+          h.setAttribute("aria-expanded",mfCollapsed[key]?"false":"true");
           body.forEach(function(el){el.style.display=mfCollapsed[key]?"none":"";});};
       });
       if(note)note.textContent="依題材分組（同一主題可跨多個題材） · 組標題為成交金額加權漲跌 · 點標題可收合 · 量單位億元";
     }
     var foot=document.createElement("div");foot.className="flow-foot";
-    var itot=(dim==="insti"&&window.LIVE_TW&&window.LIVE_TW.insti_total)?window.LIVE_TW.insti_total[curMfPer]:null;
+    var itot=(dim==="insti"&&live&&live.insti_total)?live.insti_total[curMfPer]:null;
     if(itot){
       var isum=itot[0]+itot[1]+itot[2];
       foot.innerHTML="<span>← 賣超 ／ 買超 →（"+m.label+" 配色）</span>"+
@@ -658,9 +683,16 @@
     fbox.appendChild(foot);
   }
 
-  // 該市場是否已接真實資料（目前僅台股；US/KR/JP 管線上線後在此擴充回傳其 LIVE 物件）
+  // 該市場是否已接真實資料：window.LIVE[k] 有 heatmap 即回傳其 LIVE 物件，否則 null（樣板）
   function marketLive(k){
-    return (k==="TW" && window.LIVE_TW && window.LIVE_TW.heatmap) ? window.LIVE_TW : null;
+    var j=window.LIVE[k];
+    return (j && j.heatmap) ? j : null;
+  }
+  // 資金流向維度可用性：theme 需台股主檔題材標籤（FLOW_META）、insti 需該市場真實法人資料、mom 恆可用
+  function mfDimAvail(d){
+    if(d==="theme")return cur==="TW";
+    if(d==="insti"){var lv=marketLive(cur);return !!(lv&&lv.themes&&lv.themes.some(function(t){return t.insti;}));}
+    return true;
   }
   // 依當前市場動態切換標頭副標與頁尾狀態，避免「台股已是真資料卻仍寫樣板 DEMO」的誤導
   function updateDataStatus(){
@@ -688,6 +720,7 @@
     document.getElementById("hmHint").textContent="面積＝市值，顏色＝漲跌（"+m.label+"）· 點板塊可下鑽個股";
     document.getElementById("legendBar").style.background=
       "linear-gradient(90deg,"+m.down+",#2c2c2a,"+m.up+")";
+    syncMfDim();  // 市場切換或資料非同步抵達後，刷新維度按鈕可用狀態
     renderHeatmap(m);renderFlow(m);
   }
 
@@ -696,14 +729,16 @@
   var ctabs=document.getElementById("ctryTabs");
   Object.keys(MK).forEach(function(k){var b=document.createElement("button");
     b.textContent=MK[k].label;b.dataset.k=k;
-    b.onclick=function(){cur=k;rptMode=false;syncCtry();syncView();render();};ctabs.appendChild(b);});
+    b.onclick=function(){cur=k;rptMode=false;syncCtry();syncView();render();loadLive(k);};ctabs.appendChild(b);});
   var rptBtn=document.createElement("button");
   rptBtn.textContent="📰 報告";rptBtn.dataset.k="__rpt";rptBtn.className="rpt";
+  rptBtn.setAttribute("aria-label","報告");
   rptBtn.onclick=function(){rptMode=true;syncCtry();syncView();loadReports();};
   ctabs.appendChild(rptBtn);
   function syncCtry(){[].forEach.call(ctabs.children,function(b){
     var on=rptMode?b.dataset.k==="__rpt":b.dataset.k===cur;
-    b.className=(b.dataset.k==="__rpt"?"rpt":"")+(on?" on":"");});}
+    b.className=(b.dataset.k==="__rpt"?"rpt":"")+(on?" on":"");
+    b.setAttribute("aria-pressed",on?"true":"false");});}
   function syncView(){
     [].forEach.call(document.querySelectorAll(".block"),function(el){
       if(el.id==="reportsBlock")el.style.display=rptMode?"block":"none";
@@ -788,6 +823,7 @@
           el.innerHTML="<div class='rd'>"+item.date+"</div><div class='rt'></div>";
           el.querySelector(".rt").textContent=item.title;
           el.onclick=function(){openReport(item,el);};
+          window.a11yBtn(el,item.date+" "+item.title);
           side.appendChild(el);
           if(!first){first=item;firstEl=el;}
         });
@@ -803,14 +839,26 @@
   [["d","日"],["w","週"],["m","月"]].forEach(function(x){var b=document.createElement("button");
     b.textContent=x[1];b.dataset.p=x[0];
     b.onclick=function(){curMfPer=x[0];syncMfPer();renderFlow(MK[cur]);};mfptabs.appendChild(b);});
-  function syncMfPer(){[].forEach.call(mfptabs.children,function(b){b.className=b.dataset.p===curMfPer?"on":"";});}
+  function syncMfPer(){[].forEach.call(mfptabs.children,function(b){
+    var on=b.dataset.p===curMfPer;
+    b.className=on?"on":"";b.setAttribute("aria-pressed",on?"true":"false");});}
 
-  // 維度切換：動能排序 / 依題材 / 三大法人買賣超
+  // 維度切換：動能排序 / 依題材 / 三大法人買賣超。
+  // 當前市場不支援的維度直接 disable（樣板市場的題材/法人原本是點了沒反應的死按鈕）
   var mfdtabs=document.getElementById("mfDimTabs");
   [["mom","動能"],["theme","依題材"],["insti","法人買賣超"]].forEach(function(x){var b=document.createElement("button");
     b.textContent=x[1];b.dataset.d=x[0];
-    b.onclick=function(){curMfDim=x[0];syncMfDim();renderFlow(MK[cur]);};mfdtabs.appendChild(b);});
-  function syncMfDim(){[].forEach.call(mfdtabs.children,function(b){b.className=b.dataset.d===curMfDim?"on":"";});}
+    b.onclick=function(){if(b.disabled)return;curMfDim=x[0];syncMfDim();renderFlow(MK[cur]);};mfdtabs.appendChild(b);});
+  function syncMfDim(){
+    if(!mfDimAvail(curMfDim))curMfDim="mom";  // 切到不支援該維度的市場 → 回動能
+    [].forEach.call(mfdtabs.children,function(b){
+      var av=mfDimAvail(b.dataset.d),on=b.dataset.d===curMfDim;
+      b.disabled=!av;
+      b.setAttribute("aria-disabled",av?"false":"true");
+      b.setAttribute("aria-pressed",on?"true":"false");
+      b.className=on?"on":"";
+    });
+  }
 
   syncCtry();syncMfPer();syncMfDim();render();
 
@@ -823,9 +871,15 @@
     setTimeout(function(){el.classList.remove("hl");},2600);
   };
 
-  // 嘗試載入真實資料 data.json（GitHub Pages 上會有；本機雙擊沒有則維持樣板）
-  fetch("data.json",{cache:"no-store"}).then(function(r){return r.ok?r.json():null;}).then(function(j){
-    if(j && j.heatmap){
+  // ====== 各市場真實資料載入 ======
+  // 台股讀 data.json；美/韓/日讀 data_us.json / data_kr.json / data_jp.json（同一 schema）。
+  // 檔案還不存在（該市場管線未上線）→ 維持樣板，updateDataStatus 會顯示「建置中」。
+  var liveTried={};
+  function liveFile(k){return k==="TW"?"data.json":"data_"+k.toLowerCase()+".json";}
+  function applyLive(k,j){
+    window.LIVE[k]=j;
+    if(k==="TW"){
+      // 供應鏈/關係圖模組直接讀這些全域，只能由台股資料寫入（他市場資料不得污染台股著色）
       window.LIVE_TW=j;
       // 全市場股名→當日漲跌（供應鏈各主題的公司標籤用）
       if(j.name_chg) window.LIVE_NAME_CHG=j.name_chg;
@@ -836,20 +890,30 @@
           if(v.d!=null)window.LIVE_CHG[c]=v.d;
           if(v.w!=null)window.LIVE_CHG_W[c]=v.w;});
       }
-      // 大盤加權指數：覆蓋 MK.TW 樣板值，render() 時更新標題列
-      if(j.index && j.index.close!=null){
-        MK.TW.idxVal=j.index.close.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
-        if(j.index.chg_pct!=null) MK.TW.idxChg=(j.index.chg_pct>=0?"+":"")+j.index.chg_pct.toFixed(2)+"%";
-      }
-      if(j.themes){
-        var note=document.querySelector(".flow-note");
-        if(note) note.textContent="真實資料（"+(j.data_date||"")+"）· 動能 = 成交金額 × 漲跌幅 · 週/月為交易日累積 · 量單位億元";
-      }
-      if(cur==="TW")render();  // 連同標題列指數一起重繪
+    }
+    // 指數：覆蓋該市場樣板值，render() 時更新標題列
+    if(j.index && j.index.close!=null){
+      MK[k].idxVal=j.index.close.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+      if(j.index.chg_pct!=null) MK[k].idxChg=(j.index.chg_pct>=0?"+":"")+j.index.chg_pct.toFixed(2)+"%";
+    }
+    if(j.themes && k===cur){
+      var note=document.querySelector(".flow-note");
+      if(note) note.textContent="真實資料（"+(j.data_date||"")+"）· 動能 = 成交金額 × 漲跌幅 · 週/月為交易日累積 · 量單位億元";
+    }
+    if(k===cur)render();  // 連同標題列指數一起重繪
+    if(k==="TW"){
       if(window.rerenderGraph)window.rerenderGraph();
       if(window.rerenderChain)window.rerenderChain();
     }
-  }).catch(function(){/* 無 data.json，維持樣板 */});
+  }
+  function loadLive(k){
+    if(liveTried[k])return;   // 每市場只請求一次（含 404），避免切分頁重複打
+    liveTried[k]=true;
+    fetch(liveFile(k),{cache:"no-store"}).then(function(r){return r.ok?r.json():null;})
+      .then(function(j){if(j&&j.heatmap)applyLive(k,j);})
+      .catch(function(){/* 檔案不存在或壞掉 → 維持樣板 */});
+  }
+  loadLive("TW");   // 初始只抓當前市場；其他市場切到時才 lazy 載入
 
   // 熱力圖/供應鏈上中下游/關係圖用的主題結構，直接抓 master_tw.json（真正的單一資料來源），
   // 不再手動維護第二份重複的 JS 陣列，避免兩邊資料飄移
@@ -1134,6 +1198,7 @@
         var ub=document.getElementById("chainUnfocus");
         if(ub)ub.onclick=function(){curChainFocus=null;renderChain();};
         document.querySelectorAll("#chainDemand .chainRelBtn").forEach(function(b){
+          b.setAttribute("aria-label",CHAINS[rel[+b.dataset.i].ck].label+" › "+rel[+b.dataset.i].role);
           b.onclick=function(){
             var r=rel[+b.dataset.i];
             curChain=r.ck;curChainFocus=null;syncChain();renderChain();
@@ -1151,10 +1216,13 @@
       document.getElementById("chainEnable").innerHTML="";
       // 分類標題可點收合
       document.querySelectorAll("#chainFlow .chain-group").forEach(function(gh){
+        window.a11yBtn(gh);
+        gh.setAttribute("aria-expanded",chainGroupCollapsed[gh.dataset.gkey]?"false":"true");
         gh.onclick=function(){
           var key=gh.dataset.gkey;
           chainGroupCollapsed[key]=!chainGroupCollapsed[key];
           gh.classList.toggle("collapsed");
+          gh.setAttribute("aria-expanded",chainGroupCollapsed[key]?"false":"true");
           var list=gh.nextElementSibling;
           if(list)list.style.display=chainGroupCollapsed[key]?"none":"";
         };
@@ -1164,6 +1232,7 @@
         el.style.cursor="pointer";
         el.title="點擊查看此主題的資金流向排名";
         el.onclick=function(e){e.stopPropagation();if(window.highlightFlowTheme)window.highlightFlowTheme(el.dataset.key);};
+        window.a11yBtn(el);
       });
       return;
     }
@@ -1213,6 +1282,7 @@
       el.style.cursor="pointer";
       el.title="點擊查看「"+tn+"」的資金流向排名";
       el.onclick=function(){if(window.highlightFlowTheme)window.highlightFlowTheme(nd.mid);};
+      window.a11yBtn(el);
     });
   }
 
@@ -1222,8 +1292,11 @@
   Object.keys(CHAINS).forEach(function(k){var b=document.createElement("button");
     b.textContent="🌐 "+CHAINS[k].label;b.dataset.k=k;
     b.title="人工策展的跨國供應鏈示意，非證交所真實資料";
+    b.setAttribute("aria-label",CHAINS[k].label+" 供應鏈");
     b.onclick=function(){curChain=k;syncChain();renderChain();};ctabs.appendChild(b);});
-  function syncChain(){[].forEach.call(ctabs.children,function(b){b.className=b.dataset.k===curChain?"on":"";});}
+  function syncChain(){[].forEach.call(ctabs.children,function(b){
+    var on=b.dataset.k===curChain;
+    b.className=on?"on":"";b.setAttribute("aria-pressed",on?"true":"false");});}
   curChain="master_tw";
   syncChain();renderChain();
 
@@ -1293,9 +1366,12 @@
     var data=build(scope);
     var scopeName=scope==="all"?"全部主題":(scope==="master_tw"?"台股主檔":G[scope].label);
     document.getElementById("grHint").textContent="目前顯示："+scopeName+" · "+data.nodes.length+" 家公司 · "+data.links.length+" 條供貨關係（拖曳平移、滾輪縮放）";
+    svg.attr("role","img").attr("aria-label","供應鏈關係圖："+scopeName+"，"+data.nodes.length+" 家公司、"+data.links.length+" 條供貨關係");
     var link=g.append("g").attr("stroke","#2a3142").attr("stroke-opacity",0.5).selectAll("line").data(data.links).join("line").attr("stroke-width",1);
     var node=g.append("g").selectAll("g").data(data.nodes).join("g").style("cursor","pointer").call(d3.drag().on("start",ds).on("drag",dg).on("end",de));
-    node.append("circle").attr("r",radius).attr("fill",function(d){return tierFill[d.tier];}).attr("stroke",function(d){return strokeOf(nodeChg(d,curPer));}).attr("stroke-width",3);
+    // 外框顏色=漲跌方向；下跌另加虛線外框，避免僅以顏色區分（色盲可辨）
+    node.append("circle").attr("r",radius).attr("fill",function(d){return tierFill[d.tier];}).attr("stroke",function(d){return strokeOf(nodeChg(d,curPer));}).attr("stroke-width",3)
+      .attr("stroke-dasharray",function(d){return nodeChg(d,curPer)<0?"4 3":null;});
     node.append("text").attr("class","gr-label").attr("x",function(d){return radius(d)+3;}).attr("y",4).text(function(d){return d.id;});
     node.on("mouseenter",function(ev,d){var conn={};conn[d.id]=1;
         data.links.forEach(function(l){var s=l.source.id||l.source,t=l.target.id||l.target;if(s===d.id)conn[t]=1;if(t===d.id)conn[s]=1;});
@@ -1322,13 +1398,17 @@
     [["all","★全景"]]);
   var vseg=document.getElementById("grViewSeg");
   views.forEach(function(v){var b=document.createElement("button");b.textContent=v[1];b.dataset.v=v[0];
-    b.onclick=function(){[].forEach.call(vseg.children,function(x){x.className=x.dataset.v===v[0]?"on":"";});render(v[0]);};vseg.appendChild(b);});
-  vseg.children[0].className="on";
+    b.onclick=function(){[].forEach.call(vseg.children,function(x){
+      var on=x.dataset.v===v[0];x.className=on?"on":"";x.setAttribute("aria-pressed",on?"true":"false");});render(v[0]);};
+    b.setAttribute("aria-pressed","false");vseg.appendChild(b);});
+  vseg.children[0].className="on";vseg.children[0].setAttribute("aria-pressed","true");
   var pseg=document.getElementById("grPerSeg");
   [["d","日"],["w","週"]].forEach(function(x){var b=document.createElement("button");b.textContent=x[1];b.dataset.p=x[0];
-    b.onclick=function(){curPer=x[0];[].forEach.call(pseg.children,function(y){y.className=y.dataset.p===x[0]?"on":"";});
-      g.selectAll("circle").attr("stroke",function(d){return d&&d.id?strokeOf(nodeChg(d,curPer)):this.getAttribute("stroke");});};pseg.appendChild(b);});
-  pseg.children[0].className="on";
+    b.onclick=function(){curPer=x[0];[].forEach.call(pseg.children,function(y){
+      var on=y.dataset.p===x[0];y.className=on?"on":"";y.setAttribute("aria-pressed",on?"true":"false");});
+      g.selectAll("circle").attr("stroke",function(d){return d&&d.id?strokeOf(nodeChg(d,curPer)):this.getAttribute("stroke");})
+        .attr("stroke-dasharray",function(d){return (d&&d.id&&nodeChg(d,curPer)<0)?"4 3":null;});};pseg.appendChild(b);});
+  pseg.children[0].className="on";pseg.children[0].setAttribute("aria-pressed","true");
   window.rerenderGraph=function(){render(curView);};
   render("master_tw");
 })();
