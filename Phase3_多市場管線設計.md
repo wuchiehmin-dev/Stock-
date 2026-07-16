@@ -38,9 +38,12 @@ schema 對齊的好處：前端 render（熱力圖、資金流向、法人維度
 
 ---
 
-## 階段 A — 架構鋪路（**不需 API key，可立即做**）
+## 階段 A — 架構鋪路（**已完成** ✅）
 
 目標：讓前端與後端都「多市場就緒」，但先不接真資料。
+（已實作：後端 `MARKET_TW` 設定＋`mkt` 參數貫穿；前端 `window.LIVE` 快取＋
+`loadLive()` lazy 載入 `data_<market>.json`、render 路徑一般化、
+不支援的維度按鈕 disable。之後接美股只需照下面階段 B 做。）
 
 1. **前端切換來源**（`index.html`）
    - 現況：`renderHeatmap`/`renderFlow` 在 `cur!=="TW"` 時讀寫死的 `MK[cur]`/`MFLOW[cur]`。
