@@ -112,6 +112,18 @@ def to_float(s):
         return None
 
 
+def dir_sign(dtxt):
+    """由「漲跌(+/-)」方向欄推正負號。此欄可能是 HTML 的 <p style='color:green'>-</p>
+    或純文字 +/-；下跌回 -1，其餘（含上漲、平盤）回 1。
+    注意：STOCK_DAY_ALL / MI_INDEX 的「漲跌價差」是無號絕對值，方向要看這一欄。"""
+    if dtxt is None:
+        return 1
+    t = str(dtxt).lower()
+    if "-" in t or "green" in t:
+        return -1
+    return 1
+
+
 def build_industry_lookup():
     """回傳 {股票代號: 產業別} 對照（上市 + 上櫃）。"""
     rows = fetch_csv(COMPANY_LIST)
@@ -190,8 +202,12 @@ def parse_stock_day_all_csv(raw):
             continue
         change = to_float(g("漲跌價差"))
         chg_pct = None
-        if change is not None and (close - change):
-            chg_pct = round(change / (close - change) * 100, 2)
+        if change is not None:
+            # 「漲跌價差」為無號絕對值，方向取自「漲跌(+/-)」欄
+            signed = change * dir_sign(g("漲跌(+/-)", "漲跌"))
+            prev = close - signed
+            if prev:
+                chg_pct = round(signed / prev * 100, 2)
         out.append({"code": code, "name": (g("證券名稱") or code).strip(),
                     "close": close, "change_pct": chg_pct if chg_pct is not None else 0.0,
                     "volume": vol})
@@ -233,7 +249,8 @@ def fetch_quotes():
     i_name = idx("證券名稱", "名稱")
     i_vol = idx("成交股數", "成交量")
     i_close = idx("收盤價")
-    i_change = idx("漲跌價差", "漲跌")
+    i_change = idx("漲跌價差")
+    i_dir = idx("漲跌(+/-)")
 
     out = []
     for row in data["data"]:
@@ -248,12 +265,13 @@ def fetch_quotes():
         vol = to_float(row[i_vol]) if i_vol is not None else None
         if close is None or vol is None:
             continue
-        # 漲跌幅 %：用漲跌價差 / (收盤 - 漲跌價差) 反推昨收
+        # 漲跌幅 %：「漲跌價差」為無號絕對值，方向取自「漲跌(+/-)」欄，反推昨收
         chg_pct = None
-        if change is not None and (close - change) not in (0, None):
-            prev = close - change
+        if change is not None:
+            signed = change * (dir_sign(row[i_dir]) if i_dir is not None else 1)
+            prev = close - signed
             if prev:
-                chg_pct = round(change / prev * 100, 2)
+                chg_pct = round(signed / prev * 100, 2)
         out.append({
             "code": code,
             "name": row[i_name].strip() if i_name is not None else code,
@@ -350,11 +368,7 @@ def parse_mi_index(data):
                 continue
             diff = to_float(row[i_diff]) if i_diff is not None else None
             # 方向：漲跌欄可能是 HTML 的 <p>+</p> 或純 +/-
-            sign = 1
-            if i_dir is not None:
-                dtxt = str(row[i_dir])
-                if "-" in dtxt or "green" in dtxt.lower():
-                    sign = -1
+            sign = dir_sign(row[i_dir]) if i_dir is not None else 1
             chg_pct = None
             if diff is not None:
                 signed_diff = diff * sign
