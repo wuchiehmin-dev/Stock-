@@ -112,6 +112,18 @@ def to_float(s):
         return None
 
 
+def dir_sign(dtxt):
+    """由「漲跌(+/-)」方向欄推正負號。此欄可能是 HTML 的 <p style='color:green'>-</p>
+    或純文字 +/-；下跌回 -1，其餘（含上漲、平盤）回 1。
+    注意：STOCK_DAY_ALL / MI_INDEX 的「漲跌價差」是無號絕對值，方向要看這一欄。"""
+    if dtxt is None:
+        return 1
+    t = str(dtxt).lower()
+    if "-" in t or "green" in t:
+        return -1
+    return 1
+
+
 def build_industry_lookup():
     """回傳 {股票代號: 產業別} 對照（上市 + 上櫃）。"""
     rows = fetch_csv(COMPANY_LIST)
@@ -190,8 +202,12 @@ def parse_stock_day_all_csv(raw):
             continue
         change = to_float(g("漲跌價差"))
         chg_pct = None
-        if change is not None and (close - change):
-            chg_pct = round(change / (close - change) * 100, 2)
+        if change is not None:
+            # 「漲跌價差」為無號絕對值，方向取自「漲跌(+/-)」欄
+            signed = change * dir_sign(g("漲跌(+/-)", "漲跌"))
+            prev = close - signed
+            if prev:
+                chg_pct = round(signed / prev * 100, 2)
         out.append({"code": code, "name": (g("證券名稱") or code).strip(),
                     "close": close, "change_pct": chg_pct if chg_pct is not None else 0.0,
                     "volume": vol})
@@ -233,7 +249,8 @@ def fetch_quotes():
     i_name = idx("證券名稱", "名稱")
     i_vol = idx("成交股數", "成交量")
     i_close = idx("收盤價")
-    i_change = idx("漲跌價差", "漲跌")
+    i_change = idx("漲跌價差")
+    i_dir = idx("漲跌(+/-)")
 
     out = []
     for row in data["data"]:
@@ -248,12 +265,13 @@ def fetch_quotes():
         vol = to_float(row[i_vol]) if i_vol is not None else None
         if close is None or vol is None:
             continue
-        # 漲跌幅 %：用漲跌價差 / (收盤 - 漲跌價差) 反推昨收
+        # 漲跌幅 %：「漲跌價差」為無號絕對值，方向取自「漲跌(+/-)」欄，反推昨收
         chg_pct = None
-        if change is not None and (close - change) not in (0, None):
-            prev = close - change
+        if change is not None:
+            signed = change * (dir_sign(row[i_dir]) if i_dir is not None else 1)
+            prev = close - signed
             if prev:
-                chg_pct = round(change / prev * 100, 2)
+                chg_pct = round(signed / prev * 100, 2)
         out.append({
             "code": code,
             "name": row[i_name].strip() if i_name is not None else code,
@@ -264,14 +282,16 @@ def fetch_quotes():
     return out
 
 
-def aggregate_by_sector(quotes, industry_lookup):
+def aggregate_by_sector(quotes, industry_lookup, mkt=None):
     """按產業別彙總成熱力圖需要的 treemap 結構。"""
+    # mkt 用執行期預設（本函式定義早於 MARKET_TW，def-time 預設會 NameError）
+    industry_map = (mkt or MARKET_TW)["industry_map"]
     sectors = {}
     for q in quotes:
         raw_ind = industry_lookup.get(q["code"])
         if not raw_ind:
             continue
-        sector = INDUSTRY_MAP.get(raw_ind, raw_ind)
+        sector = industry_map.get(raw_ind, raw_ind)
         # 用「成交金額 ≈ 收盤 × 成交股數」當市值權重的代理（無法取真實市值時的近似）
         weight = q["close"] * q["volume"] / 1e8  # 億元
         s = sectors.setdefault(sector, {"name": sector, "stocks": [], "w_sum": 0.0, "wchg_sum": 0.0})
@@ -350,11 +370,7 @@ def parse_mi_index(data):
                 continue
             diff = to_float(row[i_diff]) if i_diff is not None else None
             # 方向：漲跌欄可能是 HTML 的 <p>+</p> 或純 +/-
-            sign = 1
-            if i_dir is not None:
-                dtxt = str(row[i_dir])
-                if "-" in dtxt or "green" in dtxt.lower():
-                    sign = -1
+            sign = dir_sign(row[i_dir]) if i_dir is not None else 1
             chg_pct = None
             if diff is not None:
                 signed_diff = diff * sign
@@ -395,24 +411,41 @@ HISTORY_KEEP_DAYS = 45  # 保留最近 45 個交易日，足夠算月動能
 SNAP_DIR = "prices"
 INDUSTRY_CACHE = "industry_tw.json"  # 產業別對照快取（CSV 被限流時沿用）
 
+# ===== 市場設定（Stage A 多市場鋪路）=====
+# 快照層／主題引擎／熱力圖彙總都吃這份設定；之後接美/韓/日時各加一份
+# MARKET_US / MARKET_KR / MARKET_JP（out_file 為 data_us.json 等）＋該市場的抓取器即可，
+# 共用同一套「主題加權 → 產 data_*.json」流程。各函式 mkt 參數省略時即為台股。
+MARKET_TW = {
+    "code": "TW",
+    "out_file": "data.json",
+    "snap_dir": SNAP_DIR,
+    "master_file": MASTER_FILE,
+    "history_file": HISTORY_FILE,
+    "industry_map": INDUSTRY_MAP,
+    "source": "TWSE STOCK_DAY_ALL / MI_INDEX / FMTQIK / T86 + TPEx dailyQuotes/insti + t187ap03_L/O",
+    "note": "板塊漲跌為成交金額加權；面積為當日成交金額(億元)近似，非真實市值。含上市與上櫃。法人買賣超金額=買賣超股數×收盤價。",
+}
 
-def snapshot_path(date_key):
-    return os.path.join(SNAP_DIR, f"{date_key}.json")
+
+def snapshot_path(date_key, mkt=None):
+    mkt = mkt or MARKET_TW
+    return os.path.join(mkt["snap_dir"], f"{date_key}.json")
 
 
-def load_snapshot(date_key):
+def load_snapshot(date_key, mkt=None):
     try:
-        with open(snapshot_path(date_key), encoding="utf-8") as f:
+        with open(snapshot_path(date_key, mkt), encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return None
 
 
-def save_snapshot(date_key, quotes, index=None, insti=None):
+def save_snapshot(date_key, quotes, index=None, insti=None, mkt=None):
     """寫入每日快照。同日重寫採合併：新報價覆蓋同代號、舊有的保留；
     指數/法人新值優先、抓不到保留舊值 → 部分失敗的執行不會讓快照退化。"""
-    os.makedirs(SNAP_DIR, exist_ok=True)
-    old = load_snapshot(date_key) or {}
+    mkt = mkt or MARKET_TW
+    os.makedirs(mkt["snap_dir"], exist_ok=True)
+    old = load_snapshot(date_key, mkt) or {}
     stocks = old.get("stocks", {})
     for q in quotes:
         stocks[q["code"]] = {"n": q["name"], "c": q["close"], "p": q["change_pct"], "v": q["volume"]}
@@ -422,7 +455,7 @@ def save_snapshot(date_key, quotes, index=None, insti=None):
     snap = {"date": date_key, "index": index or old.get("index"), "stocks": stocks}
     if ins:
         snap["insti"] = ins
-    with open(snapshot_path(date_key), "w", encoding="utf-8") as f:
+    with open(snapshot_path(date_key, mkt), "w", encoding="utf-8") as f:
         json.dump(snap, f, ensure_ascii=False, separators=(",", ":"))
     return snap
 
@@ -433,20 +466,22 @@ def snapshot_quotes(snap):
             for c, s in snap.get("stocks", {}).items()]
 
 
-def snapshot_dates():
+def snapshot_dates(mkt=None):
     """已存在的快照日期，由舊到新。"""
-    if not os.path.isdir(SNAP_DIR):
+    mkt = mkt or MARKET_TW
+    if not os.path.isdir(mkt["snap_dir"]):
         return []
-    return sorted(f[:-5] for f in os.listdir(SNAP_DIR) if f.endswith(".json"))
+    return sorted(f[:-5] for f in os.listdir(mkt["snap_dir"]) if f.endswith(".json"))
 
 
-def load_master_themes():
-    """讀取主題主檔 master_tw.json；不存在或壞掉回傳空 list（不影響熱力圖）。"""
+def load_master_themes(mkt=None):
+    """讀取主題主檔（台股為 master_tw.json）；不存在或壞掉回傳空 list（不影響熱力圖）。"""
+    mkt = mkt or MARKET_TW
     try:
-        with open(MASTER_FILE, encoding="utf-8") as f:
+        with open(mkt["master_file"], encoding="utf-8") as f:
             return json.load(f).get("themes", [])
     except Exception as e:
-        print(f"  ! 讀取 {MASTER_FILE} 失敗：{e}", file=sys.stderr)
+        print(f"  ! 讀取 {mkt['master_file']} 失敗：{e}", file=sys.stderr)
         return []
 
 
@@ -471,16 +506,17 @@ def build_industry_lookup_cached():
         return lookup
 
 
-def sync_history_from_snapshots():
+def sync_history_from_snapshots(mkt=None):
     """用快照重算主題歷史：有快照的日期以快照為準覆蓋，無快照的舊日期（遷移前的
     legacy 資料）保留，供週/月動能計算。"""
-    history = load_history()
-    for d in snapshot_dates()[-HISTORY_KEEP_DAYS:]:
-        snap = load_snapshot(d)
+    mkt = mkt or MARKET_TW
+    history = load_history(mkt)
+    for d in snapshot_dates(mkt)[-HISTORY_KEEP_DAYS:]:
+        snap = load_snapshot(d, mkt)
         if not snap or not snap.get("stocks"):
             continue
         day_themes, day_stocks, _, ins_total = compute_day_record(
-            snapshot_quotes(snap), snap.get("insti"))
+            snapshot_quotes(snap), snap.get("insti"), mkt=mkt)
         if day_themes is None:
             break
         rec = {"themes": day_themes, "stocks": day_stocks}
@@ -489,14 +525,15 @@ def sync_history_from_snapshots():
         history[d] = rec
     dates = sorted(history.keys(), reverse=True)[:HISTORY_KEEP_DAYS]
     history = {d: history[d] for d in dates}
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+    with open(mkt["history_file"], "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False)
     return history
 
 
-def load_history():
+def load_history(mkt=None):
+    mkt = mkt or MARKET_TW
     try:
-        with open(HISTORY_FILE, encoding="utf-8") as f:
+        with open(mkt["history_file"], encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return {}
@@ -510,12 +547,12 @@ def compound_chg(chgs):
     return round((acc - 1) * 100, 2)
 
 
-def compute_day_record(quotes, insti=None):
+def compute_day_record(quotes, insti=None, mkt=None):
     """單日主題聚合。回傳 (day_themes, day_stocks, themes_out, ins_total)；
     主檔缺失回 (None, None, None, None)。回補歷史腳本也共用這個函式。
     insti = {code: [外資, 投信, 自營商] 買賣超股數}，有給時額外算每主題與
     全市場的法人買賣超金額（買賣超股數 × 當日收盤，億元）。"""
-    master = load_master_themes()
+    master = load_master_themes(mkt)
     if not master:
         return None, None, None, None
 
@@ -588,22 +625,23 @@ def compute_day_record(quotes, insti=None):
     return day_themes, day_stocks, themes_out, ins_total
 
 
-def build_theme_payload(quotes, data_date, insti=None):
-    """依 master_tw.json 主題聚合真實量價，並用 history_tw.json 累積算週/月動能。
+def build_theme_payload(quotes, data_date, insti=None, mkt=None):
+    """依主題主檔聚合真實量價，並用歷史檔累積算週/月動能（台股為 master_tw.json / history_tw.json）。
     回傳 (themes_out, stock_chg_out, insti_total)；主檔缺失時回傳 (None, None, None)。"""
-    day_themes, day_stocks, themes_out, ins_total = compute_day_record(quotes, insti)
+    mkt = mkt or MARKET_TW
+    day_themes, day_stocks, themes_out, ins_total = compute_day_record(quotes, insti, mkt=mkt)
     if themes_out is None:
         return None, None, None
 
     # 更新歷史（以 data_date 為 key，重跑同一天會覆蓋不會重複累積）
-    history = load_history()
+    history = load_history(mkt)
     rec = {"themes": day_themes, "stocks": day_stocks}
     if ins_total:
         rec["ins_total"] = ins_total
     history[data_date] = rec
     dates = sorted(history.keys(), reverse=True)[:HISTORY_KEEP_DAYS]
     history = {d: history[d] for d in dates}
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+    with open(mkt["history_file"], "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False)
     print(f"  歷史資料：{len(dates)} 個交易日（{dates[-1]} ~ {dates[0]}）")
 
@@ -921,39 +959,40 @@ def acquire_quotes(now):
     return None, None
 
 
-def rebuild_outputs(now, industry_lookup):
-    """從快照重建衍生檔（data.json / history_tw.json）。任何欄位這次抓不到，
-    自動沿用最近可用的快照或上一份 data.json，資料只會補強不會退化。"""
-    dates = snapshot_dates()
+def rebuild_outputs(now, industry_lookup, mkt=None):
+    """從快照重建衍生檔（台股為 data.json / history_tw.json）。任何欄位這次抓不到，
+    自動沿用最近可用的快照或上一份輸出檔，資料只會補強不會退化。"""
+    mkt = mkt or MARKET_TW
+    dates = snapshot_dates(mkt)
     if not dates:
         print("  ! 無任何快照，跳過重建。")
         return
     latest = dates[-1]
-    snap = load_snapshot(latest)
+    snap = load_snapshot(latest, mkt)
     quotes = snapshot_quotes(snap)
 
     prev = {}
     try:
-        with open("data.json", encoding="utf-8") as f:
+        with open(mkt["out_file"], encoding="utf-8") as f:
             prev = json.load(f)
     except Exception:
         pass
 
-    sectors = aggregate_by_sector(quotes, industry_lookup)
+    sectors = aggregate_by_sector(quotes, industry_lookup, mkt=mkt)
     print(f"  彙總板塊：{len(sectors)} 個")
     if not sectors:
         sectors = prev.get("heatmap", [])
         print(f"  ! 彙總為空，沿用上次 heatmap（{len(sectors)} 板塊）。")
 
-    sync_history_from_snapshots()
-    themes, stock_chg, insti_total = build_theme_payload(quotes, latest, snap.get("insti"))
+    sync_history_from_snapshots(mkt)
+    themes, stock_chg, insti_total = build_theme_payload(quotes, latest, snap.get("insti"), mkt=mkt)
     if themes is not None:
         print(f"  主題聚合：{len(themes)} 個主題、{len(stock_chg)} 檔個股漲跌")
 
-    # 指數 carry-forward：最新快照沒有就往前找，再沒有沿用上一份 data.json
+    # 指數 carry-forward：最新快照沒有就往前找，再沒有沿用上一份輸出檔
     market_index = None
     for d in reversed(dates):
-        s = load_snapshot(d)
+        s = load_snapshot(d, mkt)
         if s and s.get("index"):
             market_index = s["index"]
             if d != latest:
@@ -965,9 +1004,9 @@ def rebuild_outputs(now, industry_lookup):
     payload = {
         "updated": now.strftime("%Y-%m-%d %H:%M"),
         "data_date": latest,
-        "market": "TW",
-        "source": "TWSE STOCK_DAY_ALL / MI_INDEX / FMTQIK / T86 + TPEx dailyQuotes/insti + t187ap03_L/O",
-        "note": "板塊漲跌為成交金額加權；面積為當日成交金額(億元)近似，非真實市值。含上市與上櫃。法人買賣超金額=買賣超股數×收盤價。",
+        "market": mkt["code"],
+        "source": mkt["source"],
+        "note": mkt["note"],
         "heatmap": sectors,
     }
     if themes is not None:
@@ -980,9 +1019,9 @@ def rebuild_outputs(now, industry_lookup):
     # 全市場「股名→當日漲跌」對照：供應鏈各主題視圖的公司標籤用
     payload["name_chg"] = {q["name"]: q["change_pct"] for q in quotes}
 
-    with open("data.json", "w", encoding="utf-8") as f:
+    with open(mkt["out_file"], "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
-    print(f"  已寫入 data.json（{len(sectors)} 板塊，資料日 {latest}）")
+    print(f"  已寫入 {mkt['out_file']}（{len(sectors)} 板塊，資料日 {latest}）")
 
 
 def main():
