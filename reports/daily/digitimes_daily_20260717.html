@@ -6,236 +6,225 @@
 <title>DIGITIMES 每日彙整 2026-07-17</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
 <style>
-:root { color-scheme: light; }
-* { box-sizing: border-box; -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0;
-  font-family: "Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  background: #f4f6f9;
-  color: #1a2332;
-  line-height: 1.85;
-  font-size: 17px;
-}
-.wrap { max-width: 860px; margin: 0 auto; padding: 18px 16px 60px; }
-header.hero {
-  background: linear-gradient(135deg,#0b2545 0%,#134074 55%,#1b6ca8 100%);
-  color: #fff; border-radius: 16px; padding: 26px 22px; margin-bottom: 22px;
-  box-shadow: 0 6px 20px rgba(11,37,69,.25);
-}
-header.hero .kicker { font-size: 14px; letter-spacing: 2px; opacity: .85; margin-bottom: 6px; }
-header.hero h1 { margin: 0 0 10px; font-size: 25px; line-height: 1.4; }
-header.hero .meta { font-size: 14.5px; opacity: .92; }
-.badge {
-  display:inline-block; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.3);
-  padding:3px 11px; border-radius:20px; font-size:13px; margin-right:6px; margin-top:8px;
-}
-section.card {
-  background:#fff; border-radius:14px; padding:20px 20px 22px; margin-bottom:20px;
-  box-shadow:0 2px 10px rgba(20,40,80,.06); border:1px solid #e7ecf3;
-}
-h2.sec {
-  font-size:20px; margin:2px 0 16px; padding-left:12px; border-left:5px solid #1b6ca8;
-  line-height:1.4; color:#0b2545;
-}
-h3.sub { font-size:17.5px; margin:20px 0 8px; color:#134074; }
-p { margin: 0 0 13px; }
-.chartbox { position:relative; width:100%; height:360px; }
-#trendWrap { position:relative; width:100%; height:340px; }
-.note { background:#eef4fb; border:1px dashed #9cbfe0; border-radius:10px; padding:16px; text-align:center; color:#3a5a80; font-size:15.5px; }
-.deep-summary { background:#f7faff; border-radius:10px; padding:4px 16px 6px; border:1px solid #dce8f5; }
-.deep-summary p { margin:12px 0; }
-.tag-cur { color:#0b2545; font-weight:700; }
-ul.clean { margin:6px 0 14px; padding-left:0; list-style:none; }
-ul.clean li { padding:9px 12px; margin-bottom:8px; background:#f7f9fc; border-radius:8px; border-left:3px solid #1b6ca8; font-size:16px; }
-ul.clean li b { color:#0b2545; }
-.win { border-left-color:#1f9d63; }
-.lose { border-left-color:#d1495b; }
-.opinion { background:linear-gradient(135deg,#fff8ec,#fff);border:1px solid #f0dcae; }
-.opinion h2.sec { border-left-color:#e0a500; color:#7a5a00; }
-footer { text-align:center; color:#8091a5; font-size:13px; margin-top:24px; line-height:1.7; }
-.divider-src { font-size:13.5px; color:#7286a0; margin-top:6px; }
-a { color:#1b6ca8; }
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    font-family: "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", -apple-system, system-ui, sans-serif;
+    background: #f4f6f9; color: #1a2332; line-height: 1.75; font-size: 17px;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 18px 16px 60px; }
+  header.top {
+    background: linear-gradient(135deg,#0d1b2a,#1b3a5c); color:#fff;
+    border-radius: 14px; padding: 22px 20px; margin-bottom: 18px;
+  }
+  header.top .kicker { font-size: 13px; letter-spacing: 2px; opacity:.8; }
+  header.top h1 { margin: 6px 0 4px; font-size: 24px; }
+  header.top .meta { font-size: 14px; opacity:.85; }
+  .card {
+    background:#fff; border-radius: 14px; padding: 20px 20px;
+    margin-bottom: 18px; box-shadow: 0 1px 4px rgba(20,40,70,.08);
+  }
+  .card h2 {
+    font-size: 20px; margin: 0 0 14px; padding-bottom: 8px;
+    border-bottom: 3px solid #e63946; display:inline-block;
+  }
+  .chart-box { position: relative; height: 360px; width: 100%; }
+  .trend-box { position: relative; height: 320px; width: 100%; }
+  .note { font-size: 14px; color:#5a6b82; background:#eef2f7; padding:14px 16px; border-radius:10px; }
+  .section-report h2 { color:#0d1b2a; border-color:#1b3a5c; }
+  .section-report h3 {
+    font-size: 18px; margin: 22px 0 8px; color:#1b3a5c;
+    border-left: 5px solid #e63946; padding-left: 10px;
+  }
+  .exec p { margin: 10px 0; }
+  .exec b { color:#c1121f; }
+  ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .tag { display:inline-block; background:#1b3a5c; color:#fff; font-size:12px; padding:2px 9px; border-radius:20px; margin-right:6px; }
+  .emph { background:#fff3f3; border-radius:8px; padding:2px 6px; }
+  footer { text-align:center; font-size:13px; color:#8494a8; margin-top:26px; }
+  table { width:100%; border-collapse: collapse; font-size:15px; margin:6px 0; }
+  th,td { text-align:left; padding:8px 10px; border-bottom:1px solid #e6ebf1; }
+  th { background:#f0f4f8; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-<header class="hero">
-  <div class="kicker">DIGITIMES 每日新聞彙整</div>
-  <h1>記憶體／HBM 超級循環：缺貨長週期化，議價權全面翻轉</h1>
-  <div class="meta">報告產出日：2026-07-17　｜　新聞日期：2026-07-16　｜　當日新聞約 107 則，歸納 9 大主題</div>
-  <div>
-    <span class="badge">深度主題：記憶體／HBM（14 則）</span>
-    <span class="badge">分析師助理自動彙整</span>
-  </div>
-</header>
+  <header class="top">
+    <div class="kicker">DIGITIMES 每日新聞彙整．市場分析報告</div>
+    <h1>記憶體超級循環：長鑫IPO點燃全球缺貨戰</h1>
+    <div class="meta">新聞日期 2026-07-17　｜　當日新聞 100 則　｜　偵測 8 大主題　｜　深度主題：記憶體／HBM／長鑫（17 則）</div>
+  </header>
 
-<!-- ===== A. 圖表 ===== -->
-<section class="card">
-  <h2 class="sec">今日主題分布圖</h2>
-  <div class="chartbox"><canvas id="topicChart"></canvas></div>
-</section>
-
-<section class="card">
-  <h2 class="sec">主題提及次數趨勢圖</h2>
-  <div id="trendWrap"><canvas id="trendChart"></canvas></div>
-  <div id="trendNote" class="note" style="display:none;"></div>
-</section>
-
-<!-- ===== B. 深度分析 ===== -->
-<section class="card">
-  <h2 class="sec">深度分析｜記憶體／HBM 超級循環</h2>
-
-  <h3 class="sub">Executive Summary</h3>
-  <div class="deep-summary">
-    <p><span class="tag-cur">①現象：</span>記憶體正式進入「長週期缺貨」新常態。AI 伺服器對 DDR5、HBM 的剛性需求把有限產能整碗端走，原廠關閉部分舊產線、把晶圓優先配置給高毛利品項，排擠效應一路傳導到 eMMC、SLC NAND、DDR4 乃至工控 DDR3；部分工控 DDR3 交期已延後 6～9 個月，原廠甚至「不保證價格、不確認交期」。供給端不是暫時性吃緊，而是結構性短缺——新增產能多落在 2027～2028 年後才開出，2026 下半供需缺口無解。</p>
-    <p><span class="tag-cur">②市場反應：</span>資本市場與企業用實際行動證實了短缺。三大原廠 2026 年光設備投資就達 647 億美元、HBM 生產位元年增上看 103%（Omdia）；南亞科已簽的長短約 LTA 佔總產能 50%，並要求下游簽 NCNR（不可取消、不可退貨）、預付訂金鎖產能。SK 集團會長崔泰源更把 SK 海力士定位從「記憶體製造商」升級為「AI 基礎設施企業」，提出 Memory as a Service 概念。這些都是供給方重掌定價權後的戰略動作，而非短期喊價。</p>
-    <p><span class="tag-cur">③受益與受害分野：</span>受益方是三大原廠（三星、SK 海力士、美光）與台系模組廠——通用型 DRAM 利潤率已逼近 90%，原廠得以為過去過度投資「討回合理回報」。受害方是議價弱勢的下游：二、三線 3C 品牌自年初起下修出貨目標，連向來最強勢的蘋果都被突破——不僅被漲價，甚至拿不到原先預期的供貨量。車廠因記憶體佔整車成本不到 5%，屬「有損無傷」（利潤被侵蝕、生產未受衝擊）；但採購節奏偏 3C 化、慣於追價的中國供應鏈受到的短期衝擊相對較大。</p>
-    <p><span class="tag-cur">④潛在變數：</span>三大不確定因素值得續觀察：其一，現貨與合約價的背離——DDR4 現貨曾在 2Q 因中國貿易商資金調度出現拋貨恐慌，但合約價不受影響，需留意現貨雜訊是否誤導判斷。其二，地緣政治與資金風險——崔泰源直指未來 5 年最大變數是地緣政治與資金不足，恐衝擊能源價格與 AI 投資。其三，反壟斷風險——韓國檢方已就涉嫌操縱記憶體元件售價，對瀾起、瑞薩與 Rambus 展開搜索，價格若漲太兇恐引來監管介入。</p>
+  <!-- (A) 圖表區 -->
+  <div class="card">
+    <h2>今日主題分布</h2>
+    <div class="chart-box"><canvas id="topicChart"></canvas></div>
   </div>
 
-  <h3 class="sub">Industry Trend｜產業趨勢觀察</h3>
-  <p>這一輪不同於過去由通用型記憶體價格帶動的循環，主軸是「DRAM 產能向 HBM 傾斜」的結構性移轉。以生產位元計，HBM 佔整體 DRAM 產量比重預估由 2025 年的 12% 升至 2026 年 15%，2027 年可能再拉高到約 30%。由於 HBM 將多顆 DRAM 裸晶垂直堆疊、單一裸晶尺寸比一般 DRAM 大 2 倍以上，生產相同容量所需的晶圓面積與無塵室空間至少是一般 DRAM 的 3 倍——這意味著即使原廠瘋狂擴產，通用型記憶體實際可用產能反而被 HBM「吃掉」，短缺因此自我強化。有進投資證券預估 2027 年 NAND 與 HBM 漲幅仍上看 80%，通用型 DRAM 漲幅則放緩至個位數，顯示漲價動能將由通用品往高階品集中。</p>
+  <div class="card">
+    <h2>主題提及次數趨勢</h2>
+    <div id="trendWrap">
+      <div class="trend-box"><canvas id="trendChart"></canvas></div>
+    </div>
+    <div id="trendNote" class="note" style="display:none;"></div>
+  </div>
 
-  <h3 class="sub">Company Watch｜重點公司動態</h3>
-  <ul class="clean">
-    <li><b>三大原廠設備投資</b>：2026 年合計約 <b>647 億美元</b>，仍無法完全滿足需求。</li>
-    <li><b>三星</b>：HBM 此前表現不振，市場預期 2026 年 HBM 營收較 2025 年<b>大增逾 3 倍</b>；同步啟動平澤 P5 十幾兆韓元設備投資、擴招 HBM 全流程人才，衝 HBM4E／HBM5。</li>
-    <li><b>SK 海力士</b>：崔泰源提出轉型「AI 基礎設施企業」與 Memory as a Service，強調降低 Token 生成成本。</li>
-    <li><b>南亞科</b>：長短期 LTA 已佔<b>總產能 50%</b>，要求 NCNR + 預付訂金；業界預期單季漲幅達 <b>3～4 成</b>。</li>
-    <li><b>華邦電</b>：逐步減少 DDR3 供貨，部分客戶交期恐延後 6～9 個月。</li>
-    <li><b>Omdia 預測</b>：2026 年 HBM 生產位元年增 <b>103%</b>，供給規模一年翻倍仍短缺。</li>
-  </ul>
+  <!-- (B) 深度分析報告 -->
+  <div class="card section-report">
+    <h2>深度分析：記憶體／HBM／長鑫超級循環</h2>
+    <p><span class="tag">深度主題</span>當日 100 則新聞中，記憶體相關達 17 則，為單日最大群，且橫跨供需、地緣政治、技術路線與資本市場四條主線，市場影響力最高，故選為深度彙整對象。</p>
 
-  <h3 class="sub">Supply Chain Impact｜供應鏈影響</h3>
-  <p>缺貨壓力沿供應鏈往下游擠壓資金。LTA 預付機制讓南亞科等原廠鎖定未來數季營運與價格穩定，但把週轉壓力轉嫁給下游——模組廠再向更下游客戶協商縮短帳期、對提早付款者優先配貨。整條鏈進入「先拿到貨再說」的心態，備料、綁產能成為 3Q26 零組件廠營運的關鍵變數。工控／POS 客戶被迫由 DDR4 降規回 DDR3，卻發現降規也解不了缺貨。這是一個議價權由「買方」徹底轉向「賣方」的供應鏈重定價過程。</p>
+    <h3>Executive Summary</h3>
+    <div class="exec">
+      <p><b>①現象：</b>記憶體正式脫離傳統PC／手機景氣循環，進入由AI基建驅動的<span class="emph">結構性供不應求</span>。SK海力士高層公開示警，即使未來5年產能翻倍仍無法滿足需求，缺口最快2027年浮現、恐延續至2030年之後；市場對「AI能否破解DRAM景氣循環」仍有分歧，主流看法是循環未消失、而是被拉長。DDR4／DDR5／LPDDR現貨吃緊，「晶片通膨」使記憶體價格「回不去」，並外溢至車規晶片荒。</p>
+      <p><b>②市場反應：</b>資本市場與品牌廠用真金白銀證實供給焦慮。中國長鑫科技叩關科創板，募資達666億元人民幣（近年中國半導體最大案之一），DeepSeek創辦人梁文鋒旗下基金大舉參購新股；PC品牌廠「瘋搶」長鑫記憶體、訂單傳排至2027年底，蘋果測試長鑫DRAM並由Tim Cook親向白宮與財長Bessent遊說放行；蘋果同步調漲Mac、iPad售價轉嫁成本。供給端三星、SK海力士、美光皆啟動新一輪擴產與長約（LTA）鎖單。</p>
+      <p><b>③受益與受害分野：</b><b>受益</b>—三大原廠（SK海力士、三星、美光）與HBM／先進封裝供應鏈為AI時代最大受惠者；擁長約與規模的一線品牌（DHL：Dell、HP、聯想＋蘋果）取得優先供貨權；長鑫短期獲成立以來最佳獲利。<b>受害</b>—排名靠後的中小品牌廠「完全碰不到邊」，被迫承受缺料與漲價；下游終端因售價墊高、2026下半銷量開始受壓；車用等對價格敏感的應用面臨晶片荒。</p>
+      <p><b>④潛在變數：</b>最大不確定性在地緣政治。美眾院中美戰略競爭特委會主席Moolenaar聯名致函商務部長Lutnick，要求禁止美企向長鑫、長江存儲採購並補上「可採購受制裁企業產品」的法規漏洞。長鑫已被國防部列入「中國軍事企業清單」、長江存儲早在BIS實體清單；一旦行政命令落地，蘋果採購計畫生變、全球供應彈性進一步收縮、DRAM／NAND價格恐再上揚。其餘變數：AI投資泡沫疑慮、HBM4混合鍵合導入時程、2027～2028新產能開出後的供需再平衡。</p>
+    </div>
 
-  <h3 class="sub">Market Opportunity｜市場機會</h3>
-  <p>對台系供應鏈而言，機會集中在三個環節：一是<b>記憶體模組與通路廠</b>，在漲價與配貨政策下，有庫存、能提早付款者可取得優先配貨與價差利益；二是<b>HBM 相關的先進封裝、測試與矽晶圓</b>（如美光綁環球晶 10 年、12 吋矽晶圓滿載），HBM 的高晶圓面積需求放大了前段材料與後段封測的受惠彈性；三是<b>能吸收成本並轉嫁的系統品牌</b>，具規模與議價力者（如蘋果雖被漲價但仍是最後防線）反而在二、三線品牌退場後取得相對份額。</p>
+    <h3>Industry Trend（產業趨勢觀察）</h3>
+    <ul>
+      <li><b>需求結構質變：</b>生成式AI、AI代理、實體AI／機器人對記憶體容量呈指數級需求，龍頭首度對「長期供不應求」形成罕見一致看法，SK集團更提出「記憶體即服務（MEMaaS）」新商業概念。</li>
+      <li><b>戰場由DDR轉向HBM：</b>競爭核心從標準型DRAM移往HBM，且HBM4已不只是DRAM製造，而牽涉邏輯晶片製程、3D堆疊、混合鍵合與先進封裝整合，門檻大幅拉高。</li>
+      <li><b>技術路線分歧：</b>高堆疊HBM先以「散熱」一決勝負，混合鍵合（Hybrid Bonding）導入時點估延後；但HBM5世代後混合鍵合被視為不可避，南韓設備、材料商研發加速。</li>
+      <li><b>價格「回不去」：</b>2026下半漲幅雖收斂但價格續墊高，缺料難解且缺口難以預估，成為「晶片通膨」核心。</li>
+    </ul>
 
-  <h3 class="sub">Risk Analysis｜風險分析</h3>
-  <ul class="clean">
-    <li class="lose"><b>反壟斷監管</b>：韓檢已就操縱記憶體售價搜索瀾起、瑞薩、Rambus，漲勢過猛恐引監管介入。</li>
-    <li class="lose"><b>現貨／合約價背離</b>：DDR4 現貨曾恐慌拋售，若誤把現貨雜訊當趨勢，易誤判補庫存時點。</li>
-    <li class="lose"><b>需求端反噬</b>：漲價傳導至終端，二、三線 3C 已下修出貨；若消費需求明顯轉冷，缺貨敘事可能反轉。</li>
-    <li class="lose"><b>地緣政治與資金</b>：崔泰源示警未來 5 年最大變數，恐衝擊能源價格與 AI 投資動能。</li>
-    <li class="lose"><b>新增產能時點</b>：2027～2028 年新產能開出後，若 AI 需求成長趨緩，恐重演供過於求。</li>
-  </ul>
+    <h3>Company Watch（重點公司動態）</h3>
+    <table>
+      <tr><th>公司</th><th>關鍵訊息</th></tr>
+      <tr><td>長鑫科技（CXMT）</td><td>科創板IPO募資 666億元人民幣；獲成立以來最佳獲利；產品以DDR4/5、LPDDR為主，HBM仍在驗證與量產初期</td></tr>
+      <tr><td>SK海力士 / SK集團</td><td>示警缺口最快2027年、失衡延續至2030後；未來5年產能翻倍仍不足；提出MEMaaS概念</td></tr>
+      <tr><td>蘋果（Apple）</td><td>測試長鑫DRAM並遊說白宮放行；調漲Mac、iPad售價反映缺料成本；採購計畫受國會施壓承壓</td></tr>
+      <tr><td>三星 / 美光</td><td>先進製程產能優先投入HBM、以長約鎖單；美光SCA長約囊括七大車用客戶、強化車用生態系</td></tr>
+      <tr><td>鎧俠（Kioxia）</td><td>遭判侵害記憶體專利，判賠 Viasat 2.29億美元</td></tr>
+      <tr><td>PC品牌（DHL＋Apple）</td><td>Dell、HP、聯想取得長鑫優先供貨；訂單傳排至2027年底；後段品牌被排除</td></tr>
+    </table>
 
-  <h3 class="sub">My Opinion｜1–3 個月展望</h3>
-  <p>未來 1～3 個月，記憶體超級循環的敘事仍將由「供給緊、合約價漲」主導，但判斷是否過熱，建議緊盯四個可觀察的領先指標：（1）<b>南亞科／華邦電 3Q26 合約報價</b>——若單季漲幅維持 3～4 成且 LTA 佔比續升，代表原廠定價權穩固；（2）<b>DDR4 現貨與合約價價差</b>——價差若持續擴大而合約價不鬆動，短缺為真；若現貨反彈收斂，補庫存動能才會真正回來；（3）<b>HBM 佔 DRAM 位元比重</b>——朝 2027 年 30% 的路徑推進，通用型缺口就難解；（4）<b>監管與終端訊號</b>——韓檢調查後續動作、以及二三線 3C 品牌出貨下修是否擴散到一線。基本判斷：短缺結構在 2026 下半難有實質緩解，原廠與模組通路仍是最確定的受惠方；真正的轉折點要等 2027 年新產能開出，屆時須重新評估供過於求風險。</p>
+    <h3>Supply Chain Impact（供應鏈影響）</h3>
+    <ul>
+      <li>三大原廠擴產＋長約鎖單，將供給彈性集中於一線客戶，形成「大者恆大」的供貨分層。</li>
+      <li>缺料外溢：AI搶貨效應擴散帶動半導體漲價潮，車規晶片荒取決於兩大關鍵，車用生態系（美光、高通與汽車供應鏈簽約）加速綁定。</li>
+      <li>HBM4／HBM5帶動先進封裝、混合鍵合設備與材料需求，南韓設備材料商研發投入加碼。</li>
+      <li>新晶圓廠自建設到量產需數年，短期供給無法快速補位，高價環境估延續至2028年甚至更久。</li>
+    </ul>
 
-  <p class="divider-src">資料來源：DIGITIMES 每日新聞（2026-07-16）— 記憶體緊缺成常態 LTA 預付訂金、三星／SK／美光衝 HBM 產能、崔泰源 SK 海力士轉型、記憶體廠重掌議價權 等 5 篇深度研讀整合。</p>
-</section>
+    <h3>Market Opportunity（市場機會）</h3>
+    <ul>
+      <li><b>HBM／先進封裝供應鏈：</b>被明確點名為AI時代最大受惠者，涵蓋3D堆疊、混合鍵合、TSV/散熱方案。</li>
+      <li><b>散熱與均熱：</b>高堆疊HBM「先拚散熱」，散熱材料與方案供應商受惠。</li>
+      <li><b>記憶體模組與利基DRAM：</b>缺料環境下，利基型與模組廠議價力提升。</li>
+      <li><b>設備與材料：</b>混合鍵合設備、EUV相關、記憶體特用材料進入擴產週期。</li>
+    </ul>
 
-<footer>
-  本報告由市場分析師助理自動彙整生成，僅供研究參考，不構成投資建議。<br>
-  趨勢圖資料儲存於本裝置瀏覽器 localStorage，於同一裝置同一瀏覽器每日開啟即自動累積。
-</footer>
+    <h3>Risk Analysis（風險分析）</h3>
+    <ul>
+      <li><b>地緣政治風險（最高）：</b>美國國會施壓封殺中國記憶體，若行政命令補上採購漏洞，蘋果／Dell／HP須重整供應鏈，短期反而推升DRAM/NAND價格。</li>
+      <li><b>景氣循環反噬：</b>下游庫存水位提高，若終端需求不同步成長，2027～2028新產能開出後價格漲勢恐反轉。</li>
+      <li><b>AI投資泡沫：</b>需求假設高度依賴雲端資本支出持續擴張，一旦CSP放緩，結構性缺貨論述將受考驗。</li>
+      <li><b>技術追趕落差：</b>長鑫在HBM與先進封裝仍有明顯差距，666億人民幣募資相對三大廠年資本支出僅屬「起步」。</li>
+      <li><b>終端需求壓抑：</b>漲價已開始壓抑2026下半PC/手機銷量，需求破壞程度尚難量化。</li>
+    </ul>
 
+    <h3>My Opinion（1-3個月展望）</h3>
+    <p>未來1～3個月，記憶體題材的多空關鍵不在「缺不缺貨」（結構性缺貨已是共識），而在<b>地緣政治的落地速度</b>與<b>終端需求破壞的臨界點</b>。建議追蹤以下領先指標：</p>
+    <ul>
+      <li><b>行政命令動向：</b>川普政府是否將長鑫正式納入BIS實體清單、是否禁止美企採購受制裁記憶體——若成真，一線品牌供應鏈重整、原廠報價再跳升，利多三大廠、利空中國鏈與價格敏感終端。</li>
+      <li><b>合約價與現貨價背離：</b>觀察DDR5／LPDDR合約季調幅與現貨走勢是否持續墊高，以及原廠是否再擴大長約（LTA）覆蓋率。</li>
+      <li><b>終端銷量：</b>蘋果調漲後Mac/iPad與PC出貨動能，是需求破壞臨界點的第一手訊號。</li>
+      <li><b>HBM4混合鍵合時程：</b>導入延後或提前，將重新分配散熱方案與混合鍵合設備供應鏈的受惠順序。</li>
+    </ul>
+    <p>基準研判：結構性缺貨與高價環境延續至2028年的敘事在1～3個月內難被推翻，HBM／先進封裝／原廠仍是主受惠方；但長鑫題材短線波動將高度受美國政策消息面牽動，宜視為<b>政策事件驅動</b>而非單純供需題材操作。</p>
+  </div>
+
+  <footer>
+    資料來源：DIGITIMES 每日新聞（會員版）2026-07-17　｜　本報告由排程任務自動彙整，僅供研究參考，非投資建議。
+  </footer>
 </div>
 
 <script>
-// ===== 今日統計 =====
+// ===== 當日統計資料（topics 依則數由高到低排序，不含「其他」）=====
 var todayEntry = {
   date: "2026-07-17",
-  totalArticles: 107,
+  totalArticles: 100,
   topics: [
-    { name: "記憶體/HBM超級循環", count: 14 },
-    { name: "AI應用/代理/模型戰", count: 12 },
-    { name: "車用/綠能/儲能", count: 12 },
-    { name: "航太衛星軍工", count: 8 },
-    { name: "台積電先進製程與擴產", count: 8 },
-    { name: "晶片交期/供需失衡", count: 7 },
-    { name: "NVIDIA生態/黃仁勳訪日", count: 6 },
-    { name: "AI晶片自研/ASIC與代工競局", count: 6 },
-    { name: "生技再生醫療", count: 6 }
+    { name: "記憶體/HBM/長鑫", count: 17 },
+    { name: "AI應用/模型/治理", count: 12 },
+    { name: "航太/衛星/無人機軍工", count: 11 },
+    { name: "車用/電動車/綠能", count: 11 },
+    { name: "台積電/先進製程封裝", count: 9 },
+    { name: "AI自研晶片/ASIC", count: 7 },
+    { name: "機器人/實體AI", count: 5 },
+    { name: "光通訊/光纖供應鏈", count: 4 }
   ]
 };
 
-// ===== 主題分布圖（水平長條，最多者強調色）=====
+// ===== (1) 今日主題分布圖：水平長條圖 =====
 (function(){
-  var sorted = todayEntry.topics.slice().sort(function(a,b){return b.count-a.count;});
-  var labels = sorted.map(function(t){return t.name;});
-  var data = sorted.map(function(t){return t.count;});
-  var maxIdx = 0;
-  for (var i=1;i<data.length;i++){ if(data[i]>data[maxIdx]) maxIdx=i; }
-  var colors = data.map(function(_,i){ return i===maxIdx ? "#d1495b" : "#1b6ca8"; });
-  new Chart(document.getElementById("topicChart").getContext("2d"), {
+  var labels = todayEntry.topics.map(function(t){ return t.name; });
+  var data = todayEntry.topics.map(function(t){ return t.count; });
+  var maxCount = Math.max.apply(null, data);
+  var colors = data.map(function(v){ return v === maxCount ? "#e63946" : "#5a7fa6"; });
+  new Chart(document.getElementById("topicChart"), {
     type: "bar",
     data: { labels: labels, datasets: [{ label: "則數", data: data, backgroundColor: colors, borderRadius: 5 }] },
     options: {
       indexAxis: "y", responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        title: { display: true, text: "當日各主題新聞則數（共 " + todayEntry.totalArticles + " 則）", font: { size: 15 } },
-        tooltip: { callbacks: { label: function(c){ return c.parsed.x + " 則"; } } }
-      },
-      scales: {
-        x: { beginAtZero: true, ticks: { stepSize: 2 }, title: { display:true, text:"則數" } },
-        y: { ticks: { font: { size: 13 } } }
-      }
+      plugins: { legend: { display: false },
+        title: { display: true, text: "2026-07-17 各主題新聞則數（共 " + todayEntry.totalArticles + " 則）", font:{size:15} } },
+      scales: { x: { beginAtZero: true, ticks: { stepSize: 2 }, grid:{color:"#eef2f7"} },
+                y: { ticks: { font: { size: 13 } }, grid:{display:false} } }
     }
   });
 })();
 
-// ===== 趨勢圖：localStorage 跨日累積 =====
+// ===== (2) 主題提及次數趨勢圖：跨日累積 localStorage =====
 (function(){
   var KEY = "digitimes_topic_history";
   var history = [];
   try { history = JSON.parse(localStorage.getItem(KEY)) || []; } catch(e){ history = []; }
-  // upsert today by date
-  var found = false;
-  for (var i=0;i<history.length;i++){
-    if (history[i].date === todayEntry.date){ history[i] = todayEntry; found = true; break; }
-  }
-  if (!found) history.push(todayEntry);
-  history.sort(function(a,b){ return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+  // 依 date 去重後 upsert
+  history = history.filter(function(h){ return h.date !== todayEntry.date; });
+  history.push(todayEntry);
+  history.sort(function(a,b){ return a.date < b.date ? -1 : 1; });
   try { localStorage.setItem(KEY, JSON.stringify(history)); } catch(e){}
 
-  var wrap = document.getElementById("trendWrap");
-  var note = document.getElementById("trendNote");
+  var trendWrap = document.getElementById("trendWrap");
+  var trendNote = document.getElementById("trendNote");
 
-  if (history.length < 2){
-    wrap.style.display = "none";
-    note.style.display = "block";
-    note.textContent = "目前僅累積 " + history.length + " 天資料，明天起會自動累積（趨勢圖需 2 天以上資料才會顯示）。";
+  if (history.length < 2) {
+    trendWrap.style.display = "none";
+    trendNote.style.display = "block";
+    trendNote.textContent = "目前僅累積 " + history.length + " 天資料，明天起會自動累積。（趨勢資料存於本機瀏覽器 localStorage，需以同一裝置、同一瀏覽器開啟本報告才會延續累積。）";
     return;
   }
 
-  // 取最新一天則數最多的前 5 主題
-  var latest = history[history.length-1];
-  var top5 = latest.topics.slice().sort(function(a,b){return b.count-a.count;}).slice(0,5).map(function(t){return t.name;});
+  // 取最新一天則數最多的前 5 個主題
+  var latest = history[history.length - 1];
+  var top5 = latest.topics.slice().sort(function(a,b){ return b.count - a.count; }).slice(0,5).map(function(t){ return t.name; });
   var dates = history.map(function(h){ return h.date; });
-  var palette = ["#d1495b","#1b6ca8","#1f9d63","#e0a500","#7a4fbf"];
+  var palette = ["#e63946","#1b3a5c","#2a9d8f","#e9a13b","#7b5ea7"];
 
-  var datasets = top5.map(function(name, idx){
+  var datasets = top5.map(function(name, i){
     var series = history.map(function(h){
-      var c = 0;
-      for (var j=0;j<h.topics.length;j++){ if(h.topics[j].name===name){ c = h.topics[j].count; break; } }
-      return c; // 缺資料記 0
+      var found = h.topics.find(function(t){ return t.name === name; });
+      return found ? found.count : 0; // 缺資料記為 0
     });
-    return {
-      label: name, data: series,
-      borderColor: palette[idx], backgroundColor: palette[idx],
-      tension: 0.25, borderWidth: 2.5, pointRadius: 3, fill: false
-    };
+    return { label: name, data: series, borderColor: palette[i], backgroundColor: palette[i],
+             tension: 0.25, borderWidth: 2, pointRadius: 3, fill: false };
   });
 
-  new Chart(document.getElementById("trendChart").getContext("2d"), {
+  new Chart(document.getElementById("trendChart"), {
     type: "line",
     data: { labels: dates, datasets: datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      plugins: {
-        legend: { position: "bottom", labels: { font: { size: 12 }, boxWidth: 14 } },
-        title: { display: true, text: "最新一日前 5 大主題跨日則數趨勢", font: { size: 15 } }
-      },
-      scales: {
-        y: { beginAtZero: true, title: { display:true, text:"則數" } },
-        x: { title: { display:true, text:"日期" } }
-      }
+      plugins: { legend: { position: "bottom", labels:{ font:{size:12}, boxWidth:14 } },
+        title: { display: true, text: "前 5 大主題每日則數趨勢", font:{size:15} } },
+      scales: { y: { beginAtZero: true, grid:{color:"#eef2f7"} }, x:{ grid:{display:false} } }
     }
   });
 })();
